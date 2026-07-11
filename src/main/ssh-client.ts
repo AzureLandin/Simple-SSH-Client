@@ -1,0 +1,112 @@
+import { createHash } from 'crypto'
+import { readFile } from 'fs/promises'
+import { Client, type ClientChannel, type ConnectConfig } from 'ssh2'
+import { mapSshError } from '../shared/map-ssh-error'
+import type { HostConfig } from '../shared/types'
+import type { KnownHosts } from './known-hosts'
+
+export interface SshConnectParams {
+  host: HostConfig
+  password?: string
+  acceptHostKey?: boolean
+  cols?: number
+  rows?: number
+}
+
+export class SshClient {
+  private client: Client | null = null
+  private stream: ClientChannel | null = null
+
+  constructor(private readonly knownHosts: KnownHosts) {}
+
+  async connect(params: SshConnectParams): Promise<void> {
+    const { host, password, acceptHostKey, cols = 80, rows = 24 } = params
+
+    let fingerprint = ''
+    const config: ConnectConfig = {
+      host: host.host,
+      port: host.port,
+      username: host.username,
+      readyTimeout: 20000,
+      hostVerifier: (key) => {
+        const buf = Buffer.isBuffer(key) ? key : Buffer.from((key as { getPublicSSH?: () => Buffer }).getPublicSSH?.() ?? [])
+        fingerprint = createHash('sha256').update(buf).digest('base64')
+        return true
+      }
+    }
+
+    if (host.authMethod === 'privateKey') {
+      if (!host.privateKeyPath) {
+        throw { code: 'AUTH_FAILED', message: 'Private key path missing' }
+      }
+      config.privateKey = await readFile(host.privateKeyPath)
+    } else {
+      config.password = password
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const client = new Client()
+      this.client = client
+      client
+        .on('ready', () => resolve())
+        .on('error', (err) => reject(mapSshError(err)))
+        .connect(config)
+    })
+
+    const check = await this.knownHosts.check(host.host, host.port, fingerprint)
+    if (check.status === 'changed' && !acceptHostKey) {
+      this.dispose()
+      throw { code: 'HOST_KEY_CHANGED', message: 'Host key has changed' }
+    }
+    if (check.status === 'unknown' || (check.status === 'changed' && acceptHostKey)) {
+      await this.knownHosts.remember(host.host, host.port, fingerprint)
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      if (!this.client) {
+        reject({ code: 'UNKNOWN', message: 'Client missing' })
+        return
+      }
+      this.client.shell({ term: 'xterm-256color', cols, rows }, (err, stream) => {
+        if (err) {
+          reject(mapSshError(err))
+          return
+        }
+        this.stream = stream
+        resolve()
+      })
+    })
+  }
+
+  write(data: string): void {
+    this.stream?.write(data)
+  }
+
+  resize(cols: number, rows: number): void {
+    this.stream?.setWindow(rows, cols, 0, 0)
+  }
+
+  onData(cb: (data: string) => void): void {
+    this.stream?.on('data', (buf: Buffer) => cb(buf.toString('utf8')))
+  }
+
+  onClose(cb: () => void): void {
+    this.stream?.on('close', cb)
+    this.client?.on('close', cb)
+  }
+
+  dispose(): void {
+    try {
+      this.stream?.close()
+    } catch {
+      /* ignore */
+    }
+    try {
+      this.client?.end()
+    } catch {
+      /* ignore */
+    }
+    this.stream = null
+    this.client = null
+  }
+}
