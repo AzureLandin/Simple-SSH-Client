@@ -41,15 +41,174 @@ select {
 
 .main {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   background: #121212;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.main-with-sessions {
+  align-items: stretch;
+  justify-content: stretch;
+}
+
 .main-placeholder {
   color: #888;
   margin: 0;
+}
+
+/* Session tabs */
+
+.session-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.session-tab-bar {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 6px 6px 0;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  overflow-x: auto;
+}
+
+.session-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #222;
+  border: 1px solid #333;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.session-tab:hover {
+  background: #2a2a2a;
+}
+
+.session-tab-active {
+  background: #121212;
+  border-color: #444;
+}
+
+.session-tab-title {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-tab-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.session-tab-close:hover {
+  color: #fff;
+  background: transparent;
+}
+
+.session-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.session-status-connecting {
+  background: #e6b800;
+}
+
+.session-status-connected {
+  background: #3d9a50;
+}
+
+.session-status-disconnected {
+  background: #888;
+}
+
+.session-status-error {
+  background: #c44;
+}
+
+.session-terminal-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.session-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #2a2220;
+  border-bottom: 1px solid #443;
+  font-size: 13px;
+  color: #e8c4a0;
+}
+
+.session-terminals {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.terminal-view {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* Password modal */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.modal {
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 16px;
+  width: min(360px, calc(100vw - 32px));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.modal-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal-subtitle {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #999;
 }
 
 /* Host list */
