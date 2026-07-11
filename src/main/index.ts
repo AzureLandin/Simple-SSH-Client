@@ -5,8 +5,10 @@ import icon from '../../resources/icon.png?asset'
 import { ConnectionStore } from './connection-store'
 import { CredentialStore } from './credential-store'
 import { KnownHosts } from './known-hosts'
+import { MonitorService } from './monitor-service'
 import { SessionManager } from './session-manager'
 import { SettingsStore } from './settings-store'
+import { SftpService } from './sftp-service'
 import { createCredentialSafeStorage, registerIpc } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
@@ -29,6 +31,9 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
   })
+
+  // Keep page zoom fixed so Ctrl+wheel can resize terminal font instead.
+  void mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -59,8 +64,21 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  const sessions = new SessionManager(store, knownHosts, credentials, () => mainWindow)
-  registerIpc(store, sessions, settings, credentials)
+  let sftp!: SftpService
+  let monitor!: MonitorService
+  const sessions = new SessionManager(
+    store,
+    knownHosts,
+    credentials,
+    () => mainWindow,
+    (sessionId) => {
+      sftp.dispose(sessionId)
+      monitor.disposeSession(sessionId)
+    }
+  )
+  sftp = new SftpService((sessionId) => sessions.getClient(sessionId), () => mainWindow)
+  monitor = new MonitorService((sessionId) => sessions.getClient(sessionId), () => mainWindow)
+  registerIpc(store, sessions, settings, credentials, sftp, monitor)
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

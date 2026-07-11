@@ -20,7 +20,8 @@ export class SessionManager {
     private readonly store: ConnectionStore,
     private readonly knownHosts: KnownHosts,
     private readonly credentials: CredentialStore,
-    private readonly getWindow: () => BrowserWindow | null
+    private readonly getWindow: () => BrowserWindow | null,
+    private readonly onSessionDisposed?: (sessionId: string) => void
   ) {}
 
   /** Expose client for SFTP subsystem */
@@ -59,6 +60,7 @@ export class SessionManager {
     client.onClose(() => {
       if (!this.sessions.has(sessionId)) return
       this.sessions.delete(sessionId)
+      this.onSessionDisposed?.(sessionId)
       this.send(IPC.sessionClosed, { sessionId })
     })
 
@@ -77,6 +79,7 @@ export class SessionManager {
     const session = this.sessions.get(sessionId)
     if (!session) return
     this.sessions.delete(sessionId)
+    this.onSessionDisposed?.(sessionId)
     session.client.dispose()
     this.send(IPC.sessionClosed, { sessionId })
   }

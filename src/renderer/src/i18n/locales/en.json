@@ -30,22 +30,88 @@
     "disconnected": "Session disconnected",
     "error": "Connection error",
     "reconnect": "Reconnect",
-    "placeholder": "Select a host and click Connect"
+    "placeholder": "Click Hosts in the top-left to connect"
   },
   "auth": {
     "passwordTitle": "Password for {{name}}",
     "passwordLabel": "Password",
     "connect": "Connect",
+    "hostKeyChangedTitle": "Host key changed",
     "hostKeyChanged": "{{message}}\n\nThe host key has changed. Accept the new key and connect?",
     "hostKeyChangedReconnect": "{{message}}\n\nThe host key has changed. Accept the new key and reconnect?",
     "hostNotFound": "Host configuration not found",
     "connectionFailed": "Connection failed",
     "reconnectFailed": "Reconnection failed",
-    "saveCredentials": "Save login credentials for \"{{name}}\"?\nPassword or private key will be stored using OS encryption.",
+    "saveCredentialsTitle": "Save credentials",
+    "saveCredentials": "Save login credentials for \"{{name}}\"? Password or private key will be stored using OS encryption.",
+    "saveCredentialsConfirm": "Save",
+    "saveCredentialsSkip": "Not now",
     "credentialsUnavailable": "Secure credential storage is unavailable on this system"
   },
   "common": {
     "dismiss": "Dismiss",
-    "language": "Language"
+    "language": "Language",
+    "confirm": "OK",
+    "cancel": "Cancel"
+  },
+  "settings": {
+    "open": "Settings",
+    "title": "Settings",
+    "terminal": "Terminal",
+    "fontFamily": "Font",
+    "fontSize": "Font size"
+  },
+  "sidebar": {
+    "placeholderTitle": "Monitor",
+    "placeholderBody": "System monitoring will appear here later."
+  },
+  "monitor": {
+    "title": "Monitor",
+    "needSession": "Connect a session to view remote CPU, memory, and network.",
+    "unavailable": "Monitoring unavailable (Linux /proc required).",
+    "sampling": "Sampling…",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "swap": "Swap",
+    "noSwap": "None",
+    "load": "Load",
+    "netUp": "Upload",
+    "netDown": "Download",
+    "colMem": "Mem",
+    "colCpu": "CPU",
+    "colCmd": "Command",
+    "procEmpty": "No process data"
+  },
+  "hostsPicker": {
+    "open": "Hosts",
+    "title": "Hosts",
+    "empty": "No hosts yet. Create one to get started."
+  },
+  "sftp": {
+    "title": "Files (SFTP)",
+    "needSession": "Connect a session to use SFTP",
+    "connected": "Connected",
+    "up": "Up",
+    "refresh": "Refresh",
+    "upload": "Upload",
+    "dropToUpload": "Drop to upload to current folder",
+    "dropFilesOnly": "Only files can be dropped (folders are not supported)",
+    "download": "Download",
+    "downloading": "Downloading",
+    "uploading": "Uploading",
+    "downloadDone": "Download complete",
+    "uploadDone": "Upload complete",
+    "mkdir": "New folder",
+    "rename": "Rename",
+    "delete": "Delete",
+    "mkdirPrompt": "Folder name",
+    "renamePrompt": "New name",
+    "deleteConfirm": "Delete \"{{name}}\"?",
+    "loading": "Loading…",
+    "emptyDir": "This folder is empty",
+    "colName": "Name",
+    "colSize": "Size",
+    "colModified": "Modified",
+    "error": "SFTP operation failed"
   }
 }

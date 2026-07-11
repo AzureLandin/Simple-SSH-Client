@@ -106,9 +106,66 @@ export class SshClient {
     this.client?.on('close', once)
   }
 
-  /** Underlying ssh2 client for SFTP */
+  /** Underlying ssh2 client for SFTP / exec */
   getRawClient(): Client | null {
     return this.client
+  }
+
+  /** Run a non-interactive remote command; does not use the shell PTY. */
+  async exec(command: string, timeoutMs = 8000): Promise<string> {
+    const raw = this.client
+    if (!raw) throw { code: 'SESSION_NOT_FOUND', message: 'SSH client missing' }
+
+    return new Promise((resolve, reject) => {
+      raw.exec(command, (err, stream) => {
+        if (err || !stream) {
+          reject({ code: 'UNKNOWN', message: err?.message ?? 'exec failed' })
+          return
+        }
+        let stdout = ''
+        let stderr = ''
+        let settled = false
+        const timer = setTimeout(() => {
+          if (settled) return
+          settled = true
+          try {
+            stream.close()
+          } catch {
+            /* ignore */
+          }
+          reject({ code: 'TIMEOUT', message: 'Remote command timed out' })
+        }, timeoutMs)
+
+        const finish = (fn: () => void): void => {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
+          fn()
+        }
+
+        stream.on('data', (buf: Buffer) => {
+          stdout += buf.toString('utf8')
+        })
+        stream.stderr.on('data', (buf: Buffer) => {
+          stderr += buf.toString('utf8')
+        })
+        stream.on('close', (code: number | null) => {
+          finish(() => {
+            if (code && code !== 0 && !stdout) {
+              reject({
+                code: 'UNKNOWN',
+                message: stderr.trim() || `Remote command exited with ${code}`
+              })
+              return
+            }
+            resolve(stdout)
+          })
+        })
+        stream.on('error', (e: Error) => {
+          finish(() => reject({ code: 'UNKNOWN', message: e.message }))
+        })
+      })
+    })
   }
 
   dispose(): void {

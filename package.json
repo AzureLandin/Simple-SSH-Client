@@ -25,6 +25,7 @@
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
+        "font-list": "^2.1.0",
         "i18next": "^26.3.6",
         "react-i18next": "^17.0.9",
         "ssh2": "^1.17.0"

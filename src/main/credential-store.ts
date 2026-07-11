@@ -78,10 +78,13 @@ export class CredentialStore {
       }
       return parsed
     } catch (err) {
-      const e = err as NodeJS.ErrnoException & AppError
-      if (e.code === 'CONFIG_READ_FAILED') throw e
-      if (e.code === 'ENOENT') return { version: 1, entries: {} }
-      throw configError('CONFIG_READ_FAILED', e.message ?? 'Failed to read credentials')
+      const code = (err as { code?: string }).code
+      if (code === 'CONFIG_READ_FAILED') throw err
+      if (code === 'ENOENT') return { version: 1, entries: {} }
+      throw configError(
+        'CONFIG_READ_FAILED',
+        err instanceof Error ? err.message : 'Failed to read credentials'
+      )
     }
   }
 
