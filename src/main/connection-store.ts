@@ -63,10 +63,13 @@ export class ConnectionStore {
         throw configError('CONFIG_READ_FAILED', 'Hosts file is corrupt')
       }
     } catch (err) {
-      const e = err as NodeJS.ErrnoException & AppError
-      if (e.code === 'CONFIG_READ_FAILED') throw e
-      if (e.code === 'ENOENT') return { hosts: [] }
-      throw configError('CONFIG_READ_FAILED', e.message ?? 'Failed to read hosts file')
+      const code = (err as { code?: string }).code
+      if (code === 'CONFIG_READ_FAILED') throw err
+      if (code === 'ENOENT') return { hosts: [] }
+      throw configError(
+        'CONFIG_READ_FAILED',
+        err instanceof Error ? err.message : 'Failed to read hosts file'
+      )
     }
   }
 

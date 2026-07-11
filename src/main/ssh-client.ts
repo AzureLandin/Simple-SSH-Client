@@ -8,6 +8,8 @@ import type { KnownHosts } from './known-hosts'
 export interface SshConnectParams {
   host: HostConfig
   password?: string
+  /** In-memory private key PEM/contents; preferred over host.privateKeyPath when set */
+  privateKey?: string
   acceptHostKey?: boolean
   cols?: number
   rows?: number
@@ -20,7 +22,7 @@ export class SshClient {
   constructor(private readonly knownHosts: KnownHosts) {}
 
   async connect(params: SshConnectParams): Promise<void> {
-    const { host, password, acceptHostKey, cols = 80, rows = 24 } = params
+    const { host, password, privateKey, acceptHostKey, cols = 80, rows = 24 } = params
 
     let fingerprint = ''
     const config: ConnectConfig = {
@@ -36,10 +38,13 @@ export class SshClient {
     }
 
     if (host.authMethod === 'privateKey') {
-      if (!host.privateKeyPath) {
+      if (privateKey) {
+        config.privateKey = Buffer.from(privateKey, 'utf8')
+      } else if (host.privateKeyPath) {
+        config.privateKey = await readFile(host.privateKeyPath)
+      } else {
         throw { code: 'AUTH_FAILED', message: 'Private key path missing' }
       }
-      config.privateKey = await readFile(host.privateKeyPath)
     } else {
       config.password = password
     }
@@ -99,6 +104,68 @@ export class SshClient {
     }
     this.stream?.on('close', once)
     this.client?.on('close', once)
+  }
+
+  /** Underlying ssh2 client for SFTP / exec */
+  getRawClient(): Client | null {
+    return this.client
+  }
+
+  /** Run a non-interactive remote command; does not use the shell PTY. */
+  async exec(command: string, timeoutMs = 8000): Promise<string> {
+    const raw = this.client
+    if (!raw) throw { code: 'SESSION_NOT_FOUND', message: 'SSH client missing' }
+
+    return new Promise((resolve, reject) => {
+      raw.exec(command, (err, stream) => {
+        if (err || !stream) {
+          reject({ code: 'UNKNOWN', message: err?.message ?? 'exec failed' })
+          return
+        }
+        let stdout = ''
+        let stderr = ''
+        let settled = false
+        const timer = setTimeout(() => {
+          if (settled) return
+          settled = true
+          try {
+            stream.close()
+          } catch {
+            /* ignore */
+          }
+          reject({ code: 'TIMEOUT', message: 'Remote command timed out' })
+        }, timeoutMs)
+
+        const finish = (fn: () => void): void => {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
+          fn()
+        }
+
+        stream.on('data', (buf: Buffer) => {
+          stdout += buf.toString('utf8')
+        })
+        stream.stderr.on('data', (buf: Buffer) => {
+          stderr += buf.toString('utf8')
+        })
+        stream.on('close', (code: number | null) => {
+          finish(() => {
+            if (code && code !== 0 && !stdout) {
+              reject({
+                code: 'UNKNOWN',
+                message: stderr.trim() || `Remote command exited with ${code}`
+              })
+              return
+            }
+            resolve(stdout)
+          })
+        })
+        stream.on('error', (e: Error) => {
+          finish(() => reject({ code: 'UNKNOWN', message: e.message }))
+        })
+      })
+    })
   }
 
   dispose(): void {

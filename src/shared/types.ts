@@ -1,5 +1,13 @@
 export type AuthMethod = 'password' | 'privateKey'
 
+export type LanguageCode = 'zh' | 'en'
+
+export interface AppSettings {
+  language: LanguageCode
+  terminalFontFamily: string
+  terminalFontSize: number
+}
+
 export interface HostConfig {
   id: string
   name: string
@@ -9,6 +17,8 @@ export interface HostConfig {
   authMethod: AuthMethod
   /** Absolute path; only used when authMethod === 'privateKey' */
   privateKeyPath?: string
+  credentialsPrompted?: boolean
+  credentialsSaved?: boolean
 }
 
 export type HostInput = Omit<HostConfig, 'id'>
@@ -49,6 +59,43 @@ export interface SessionErrorEvent {
   error: AppError
 }
 
+export interface MonitorProcess {
+  memBytes: number
+  cpuPercent: number
+  command: string
+}
+
+export interface MonitorSnapshot {
+  title: string
+  cpuPercent: number | null
+  memUsedBytes: number
+  memTotalBytes: number
+  swapUsedBytes: number
+  swapTotalBytes: number
+  load1: number
+  load5: number
+  load15: number
+  netRxBps: number | null
+  netTxBps: number | null
+  processes: MonitorProcess[]
+  updatedAt: number
+}
+
+export interface MonitorUpdateEvent {
+  sessionId: string | null
+  snapshot: MonitorSnapshot | null
+  error?: string
+}
+
+export interface SftpTransferProgressEvent {
+  sessionId: string
+  direction: 'up' | 'down'
+  name: string
+  transferred: number
+  total: number
+  done: boolean
+}
+
 export interface ElectronApi {
   hosts: {
     list: () => Promise<HostConfig[]>
@@ -68,6 +115,50 @@ export interface ElectronApi {
     onClosed: (cb: (event: SessionClosedEvent) => void) => () => void
     onError: (cb: (event: SessionErrorEvent) => void) => () => void
   }
+  settings: {
+    get: () => Promise<AppSettings>
+    set: (patch: Partial<AppSettings>) => Promise<AppSettings>
+  }
+  credentials: {
+    isAvailable: () => Promise<boolean>
+    save: (
+      hostId: string,
+      payload: { password?: string; privateKeyPath?: string }
+    ) => Promise<void>
+    clear: (hostId: string) => Promise<void>
+    markPrompted: (hostId: string, saved: boolean) => Promise<void>
+  }
+  sftp: {
+    list: (sessionId: string) => Promise<
+      Array<{
+        name: string
+        path: string
+        isDirectory: boolean
+        size: number
+        modifyTime: number
+      }>
+    >
+    cwd: (sessionId: string) => Promise<string>
+    chdir: (sessionId: string, remotePath: string) => Promise<string>
+    mkdir: (sessionId: string, name: string) => Promise<void>
+    rename: (sessionId: string, from: string, to: string) => Promise<void>
+    remove: (sessionId: string, remotePath: string) => Promise<void>
+    upload: (sessionId: string) => Promise<void>
+    uploadPaths: (sessionId: string, localPaths: string[]) => Promise<void>
+    download: (sessionId: string, remotePath: string, defaultName: string) => Promise<void>
+    onTransferProgress: (cb: (event: SftpTransferProgressEvent) => void) => () => void
+  }
+  files: {
+    /** Resolve OS path for a File from drag-drop (Electron webUtils). */
+    getPathForFile: (file: File) => string
+  }
+  monitor: {
+    setActive: (sessionId: string | null, title?: string) => Promise<void>
+    onUpdate: (cb: (event: MonitorUpdateEvent) => void) => () => void
+  }
+  fonts: {
+    list: () => Promise<string[]>
+  }
   dialog: {
     openPrivateKeyFile: () => Promise<string | null>
   }
@@ -85,5 +176,26 @@ export const IPC = {
   sessionData: 'session:data',
   sessionClosed: 'session:closed',
   sessionError: 'session:error',
-  dialogOpenPrivateKey: 'dialog:openPrivateKey'
+  settingsGet: 'settings:get',
+  settingsSet: 'settings:set',
+  credentialsIsAvailable: 'credentials:isAvailable',
+  credentialsSave: 'credentials:save',
+  credentialsClear: 'credentials:clear',
+  credentialsMarkPrompted: 'credentials:markPrompted',
+  sftpList: 'sftp:list',
+  sftpCwd: 'sftp:cwd',
+  sftpChdir: 'sftp:chdir',
+  sftpMkdir: 'sftp:mkdir',
+  sftpRename: 'sftp:rename',
+  sftpRemove: 'sftp:remove',
+  sftpUpload: 'sftp:upload',
+  sftpUploadPaths: 'sftp:uploadPaths',
+  sftpDownload: 'sftp:download',
+  sftpTransferProgress: 'sftp:transferProgress',
+  monitorSetActive: 'monitor:setActive',
+  monitorUpdate: 'monitor:update',
+  fontsList: 'fonts:list',
+  dialogOpenPrivateKey: 'dialog:openPrivateKey',
+  dialogOpenUploadFiles: 'dialog:openUploadFiles',
+  dialogSaveDownload: 'dialog:saveDownload'
 } as const

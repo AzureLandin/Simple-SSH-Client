@@ -1,0 +1,117 @@
+{
+  "hosts": {
+    "title": "主机",
+    "new": "新建主机",
+    "empty": "暂无主机",
+    "connect": "连接",
+    "edit": "编辑",
+    "delete": "删除",
+    "deleteConfirm": "确定删除主机「{{name}}」？"
+  },
+  "form": {
+    "newTitle": "新建主机",
+    "editTitle": "编辑主机",
+    "name": "名称",
+    "host": "主机",
+    "port": "端口",
+    "username": "用户名",
+    "auth": "认证方式",
+    "password": "密码",
+    "privateKey": "私钥",
+    "privateKeyPath": "私钥路径",
+    "browse": "浏览",
+    "cancel": "取消",
+    "save": "保存",
+    "create": "创建",
+    "saving": "保存中…"
+  },
+  "session": {
+    "close": "关闭",
+    "disconnected": "会话已断开",
+    "error": "连接错误",
+    "reconnect": "重新连接",
+    "placeholder": "点击左上角「主机」选择并连接"
+  },
+  "auth": {
+    "passwordTitle": "输入 {{name}} 的密码",
+    "passwordLabel": "密码",
+    "connect": "连接",
+    "hostKeyChangedTitle": "主机密钥变更",
+    "hostKeyChanged": "{{message}}\n\n主机密钥已变更。是否接受新密钥并连接？",
+    "hostKeyChangedReconnect": "{{message}}\n\n主机密钥已变更。是否接受新密钥并重新连接？",
+    "hostNotFound": "未找到主机配置",
+    "connectionFailed": "连接失败",
+    "reconnectFailed": "重连失败",
+    "saveCredentialsTitle": "保存凭据",
+    "saveCredentials": "是否保存主机「{{name}}」的登录凭据？密码或私钥将使用系统加密安全存储。",
+    "saveCredentialsConfirm": "保存",
+    "saveCredentialsSkip": "暂不",
+    "credentialsUnavailable": "当前系统无法安全保存凭据"
+  },
+  "common": {
+    "dismiss": "关闭",
+    "language": "语言",
+    "confirm": "确定",
+    "cancel": "取消"
+  },
+  "settings": {
+    "open": "设置",
+    "title": "设置",
+    "terminal": "终端",
+    "fontFamily": "字体",
+    "fontSize": "字号"
+  },
+  "sidebar": {
+    "placeholderTitle": "监控",
+    "placeholderBody": "此处将用于系统监控等信息，敬请期待。"
+  },
+  "monitor": {
+    "title": "监控",
+    "needSession": "连接会话后显示远程 CPU、内存与网络。",
+    "unavailable": "当前主机暂不支持监控（需 Linux /proc）。",
+    "sampling": "采样中…",
+    "cpu": "CPU",
+    "memory": "内存",
+    "swap": "交换",
+    "noSwap": "无",
+    "load": "负载",
+    "netUp": "上传",
+    "netDown": "下载",
+    "colMem": "内存",
+    "colCpu": "CPU",
+    "colCmd": "命令",
+    "procEmpty": "暂无进程数据"
+  },
+  "hostsPicker": {
+    "open": "主机",
+    "title": "主机管理",
+    "empty": "暂无主机，请先新建"
+  },
+  "sftp": {
+    "title": "文件 (SFTP)",
+    "needSession": "请先连接会话后再使用 SFTP",
+    "connected": "已连接",
+    "up": "上级",
+    "refresh": "刷新",
+    "upload": "上传",
+    "dropToUpload": "松开以上传到当前目录",
+    "dropFilesOnly": "仅支持拖入文件（不支持文件夹）",
+    "download": "下载",
+    "downloading": "下载中",
+    "uploading": "上传中",
+    "downloadDone": "下载完成",
+    "uploadDone": "上传完成",
+    "mkdir": "新建文件夹",
+    "rename": "重命名",
+    "delete": "删除",
+    "mkdirPrompt": "文件夹名称",
+    "renamePrompt": "新名称",
+    "deleteConfirm": "确定删除「{{name}}」？",
+    "loading": "加载中…",
+    "emptyDir": "此目录为空",
+    "colName": "名称",
+    "colSize": "大小",
+    "colModified": "修改时间",
+    "error": "SFTP 操作失败"
+  }
+}

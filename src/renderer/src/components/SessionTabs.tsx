@@ -1,4 +1,6 @@
+import { useTranslation } from 'react-i18next'
 import type { UiSession } from '../hooks/useSessions'
+import { SftpPanel } from './SftpPanel'
 import { TerminalView } from './TerminalView'
 
 interface SessionTabsProps {
@@ -8,6 +10,12 @@ interface SessionTabsProps {
   onClose: (id: string) => void
   onReconnect: (session: UiSession) => void
   registerDataListener: (sessionId: string, cb: (data: string) => void) => () => void
+  sftpExpanded: boolean
+  onToggleSftp: () => void
+  onOpenHosts: () => void
+  terminalFontFamily: string
+  terminalFontSize: number
+  onTerminalFontSizeChange: (size: number) => void
 }
 
 function statusClass(status: UiSession['status']): string {
@@ -20,13 +28,31 @@ export function SessionTabs({
   onSelect,
   onClose,
   onReconnect,
-  registerDataListener
+  registerDataListener,
+  sftpExpanded,
+  onToggleSftp,
+  onOpenHosts,
+  terminalFontFamily,
+  terminalFontSize,
+  onTerminalFontSizeChange
 }: SessionTabsProps): React.JSX.Element {
+  const { t } = useTranslation()
   const activeSession = sessions.find((s) => s.sessionId === activeSessionId)
+  const sftpConnected = activeSession?.status === 'connected'
 
   return (
     <div className="session-tabs">
       <div className="session-tab-bar" role="tablist">
+        <button
+          type="button"
+          className="hosts-launcher"
+          onClick={onOpenHosts}
+          title={t('hostsPicker.open')}
+        >
+          <span className="hosts-launcher-icon" aria-hidden />
+          <span>{t('hostsPicker.open')}</span>
+        </button>
+
         {sessions.map((session) => (
           <div
             key={session.sessionId}
@@ -47,7 +73,7 @@ export function SessionTabs({
             <button
               type="button"
               className="session-tab-close"
-              aria-label={`Close ${session.title}`}
+              aria-label={`${t('session.close')} ${session.title}`}
               onClick={(e) => {
                 e.stopPropagation()
                 void onClose(session.sessionId)
@@ -60,35 +86,51 @@ export function SessionTabs({
       </div>
 
       <div className="session-terminal-area">
-        {activeSession &&
-          (activeSession.status === 'disconnected' || activeSession.status === 'error') && (
-            <div className="session-banner" role="alert">
-              <span>
-                {activeSession.status === 'error'
-                  ? (activeSession.errorMessage ?? 'Connection error')
-                  : 'Session disconnected'}
-              </span>
-              <button
-                type="button"
-                className="btn-primary btn-sm"
-                onClick={() => onReconnect(activeSession)}
-              >
-                Reconnect
-              </button>
-            </div>
-          )}
+        {sessions.length === 0 ? (
+          <p className="main-placeholder">{t('session.placeholder')}</p>
+        ) : (
+          <>
+            {activeSession &&
+              (activeSession.status === 'disconnected' || activeSession.status === 'error') && (
+                <div className="session-banner" role="alert">
+                  <span>
+                    {activeSession.status === 'error'
+                      ? (activeSession.errorMessage ?? t('session.error'))
+                      : t('session.disconnected')}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-primary btn-sm"
+                    onClick={() => onReconnect(activeSession)}
+                  >
+                    {t('session.reconnect')}
+                  </button>
+                </div>
+              )}
 
-        <div className="session-terminals">
-          {sessions.map((session) => (
-            <TerminalView
-              key={session.sessionId}
-              sessionId={session.sessionId}
-              registerDataListener={registerDataListener}
-              visible={session.sessionId === activeSessionId}
-            />
-          ))}
-        </div>
+            <div className="session-terminals">
+              {sessions.map((session) => (
+                <TerminalView
+                  key={session.sessionId}
+                  sessionId={session.sessionId}
+                  registerDataListener={registerDataListener}
+                  visible={session.sessionId === activeSessionId}
+                  fontFamily={terminalFontFamily}
+                  fontSize={terminalFontSize}
+                  onFontSizeChange={onTerminalFontSizeChange}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
+
+      <SftpPanel
+        sessionId={activeSessionId}
+        connected={Boolean(sftpConnected)}
+        expanded={sftpExpanded}
+        onToggle={onToggleSftp}
+      />
     </div>
   )
 }

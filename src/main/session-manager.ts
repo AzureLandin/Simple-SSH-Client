@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import type { BrowserWindow } from 'electron'
 import type { ConnectOptions } from '../shared/types'
 import { IPC } from '../shared/types'
+import type { CredentialStore } from './credential-store'
 import { ConnectionStore } from './connection-store'
 import { KnownHosts } from './known-hosts'
 import { SshClient } from './ssh-client'
@@ -18,8 +19,15 @@ export class SessionManager {
   constructor(
     private readonly store: ConnectionStore,
     private readonly knownHosts: KnownHosts,
-    private readonly getWindow: () => BrowserWindow | null
+    private readonly credentials: CredentialStore,
+    private readonly getWindow: () => BrowserWindow | null,
+    private readonly onSessionDisposed?: (sessionId: string) => void
   ) {}
+
+  /** Expose client for SFTP subsystem */
+  getClient(sessionId: string): SshClient {
+    return this.require(sessionId).client
+  }
 
   async connect(hostId: string, options: ConnectOptions = {}): Promise<{ sessionId: string }> {
     const host = await this.store.getById(hostId)
@@ -27,13 +35,15 @@ export class SessionManager {
       throw { code: 'UNKNOWN', message: `Host not found: ${hostId}` }
     }
 
+    const saved = host.credentialsSaved ? await this.credentials.get(hostId) : undefined
     const client = new SshClient(this.knownHosts)
     const sessionId = randomUUID()
 
     try {
       await client.connect({
         host,
-        password: options.password,
+        password: options.password ?? saved?.password,
+        privateKey: saved?.privateKey,
         acceptHostKey: options.acceptHostKey
       })
     } catch (err) {
@@ -50,6 +60,7 @@ export class SessionManager {
     client.onClose(() => {
       if (!this.sessions.has(sessionId)) return
       this.sessions.delete(sessionId)
+      this.onSessionDisposed?.(sessionId)
       this.send(IPC.sessionClosed, { sessionId })
     })
 
@@ -68,6 +79,7 @@ export class SessionManager {
     const session = this.sessions.get(sessionId)
     if (!session) return
     this.sessions.delete(sessionId)
+    this.onSessionDisposed?.(sessionId)
     session.client.dispose()
     this.send(IPC.sessionClosed, { sessionId })
   }
