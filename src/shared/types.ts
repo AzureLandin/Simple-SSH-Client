@@ -1,5 +1,11 @@
 export type AuthMethod = 'password' | 'privateKey'
 
+export type LanguageCode = 'zh' | 'en'
+
+export interface AppSettings {
+  language: LanguageCode
+}
+
 export interface HostConfig {
   id: string
   name: string
@@ -9,6 +15,8 @@ export interface HostConfig {
   authMethod: AuthMethod
   /** Absolute path; only used when authMethod === 'privateKey' */
   privateKeyPath?: string
+  credentialsPrompted?: boolean
+  credentialsSaved?: boolean
 }
 
 export type HostInput = Omit<HostConfig, 'id'>
@@ -68,6 +76,10 @@ export interface ElectronApi {
     onClosed: (cb: (event: SessionClosedEvent) => void) => () => void
     onError: (cb: (event: SessionErrorEvent) => void) => () => void
   }
+  settings: {
+    get: () => Promise<AppSettings>
+    set: (patch: Partial<AppSettings>) => Promise<AppSettings>
+  }
   dialog: {
     openPrivateKeyFile: () => Promise<string | null>
   }
@@ -85,5 +97,7 @@ export const IPC = {
   sessionData: 'session:data',
   sessionClosed: 'session:closed',
   sessionError: 'session:error',
+  settingsGet: 'settings:get',
+  settingsSet: 'settings:set',
   dialogOpenPrivateKey: 'dialog:openPrivateKey'
 } as const

@@ -1,9 +1,14 @@
 import { dialog, ipcMain } from 'electron'
 import type { ConnectionStore } from './connection-store'
 import type { SessionManager } from './session-manager'
-import { IPC, type ConnectOptions, type HostInput } from '../shared/types'
+import type { SettingsStore } from './settings-store'
+import { IPC, type AppSettings, type ConnectOptions, type HostInput } from '../shared/types'
 
-export function registerIpc(store: ConnectionStore, sessions: SessionManager): void {
+export function registerIpc(
+  store: ConnectionStore,
+  sessions: SessionManager,
+  settings: SettingsStore
+): void {
   ipcMain.handle(IPC.hostsList, async () => store.list())
   ipcMain.handle(IPC.hostsCreate, async (_e, input: HostInput) => store.create(input))
   ipcMain.handle(IPC.hostsUpdate, async (_e, id: string, patch: Partial<HostInput>) =>
@@ -23,6 +28,9 @@ export function registerIpc(store: ConnectionStore, sessions: SessionManager): v
   ipcMain.handle(IPC.sessionsDisconnect, async (_e, sessionId: string) => {
     sessions.disconnect(sessionId)
   })
+
+  ipcMain.handle(IPC.settingsGet, async () => settings.get())
+  ipcMain.handle(IPC.settingsSet, async (_e, patch: Partial<AppSettings>) => settings.set(patch))
 
   ipcMain.handle(IPC.dialogOpenPrivateKey, async () => {
     const result = await dialog.showOpenDialog({

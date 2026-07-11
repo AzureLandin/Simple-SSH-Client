@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { AuthMethod, HostInput } from '../../../shared/types'
 
 interface HostFormProps {
@@ -8,6 +9,7 @@ interface HostFormProps {
 }
 
 export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.JSX.Element {
+  const { t } = useTranslation()
   const [name, setName] = useState(initial?.name ?? '')
   const [host, setHost] = useState(initial?.host ?? '')
   const [port, setPort] = useState(String(initial?.port ?? 22))
@@ -47,10 +49,10 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
 
   return (
     <form className="host-form" onSubmit={(e) => void handleSubmit(e)}>
-      <h3 className="host-form-title">{isEdit ? 'Edit host' : 'New host'}</h3>
+      <h3 className="host-form-title">{isEdit ? t('form.editTitle') : t('form.newTitle')}</h3>
 
       <label className="form-field">
-        <span>Name</span>
+        <span>{t('form.name')}</span>
         <input
           type="text"
           value={name}
@@ -61,7 +63,7 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
       </label>
 
       <label className="form-field">
-        <span>Host</span>
+        <span>{t('form.host')}</span>
         <input
           type="text"
           value={host}
@@ -72,7 +74,7 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
       </label>
 
       <label className="form-field">
-        <span>Port</span>
+        <span>{t('form.port')}</span>
         <input
           type="number"
           value={port}
@@ -84,7 +86,7 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
       </label>
 
       <label className="form-field">
-        <span>Username</span>
+        <span>{t('form.username')}</span>
         <input
           type="text"
           value={username}
@@ -94,19 +96,19 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
       </label>
 
       <label className="form-field">
-        <span>Authentication</span>
+        <span>{t('form.auth')}</span>
         <select
           value={authMethod}
           onChange={(e) => setAuthMethod(e.target.value as AuthMethod)}
         >
-          <option value="password">Password</option>
-          <option value="privateKey">Private key</option>
+          <option value="password">{t('form.password')}</option>
+          <option value="privateKey">{t('form.privateKey')}</option>
         </select>
       </label>
 
       {authMethod === 'privateKey' && (
         <label className="form-field">
-          <span>Private key path</span>
+          <span>{t('form.privateKeyPath')}</span>
           <div className="form-field-row">
             <input
               type="text"
@@ -115,7 +117,7 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
               placeholder="/path/to/key"
             />
             <button type="button" onClick={() => void handleBrowse()}>
-              Browse
+              {t('form.browse')}
             </button>
           </div>
         </label>
@@ -123,10 +125,10 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
 
       <div className="form-actions">
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
-          Cancel
+          {t('form.cancel')}
         </button>
         <button type="submit" className="btn-primary" disabled={submitting}>
-          {submitting ? 'Saving…' : isEdit ? 'Save' : 'Create'}
+          {submitting ? t('form.saving') : isEdit ? t('form.save') : t('form.create')}
         </button>
       </div>
     </form>

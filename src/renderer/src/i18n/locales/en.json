@@ -1,0 +1,49 @@
+{
+  "hosts": {
+    "title": "Hosts",
+    "new": "New host",
+    "empty": "No hosts yet",
+    "connect": "Connect",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete host \"{{name}}\"?"
+  },
+  "form": {
+    "newTitle": "New host",
+    "editTitle": "Edit host",
+    "name": "Name",
+    "host": "Host",
+    "port": "Port",
+    "username": "Username",
+    "auth": "Authentication",
+    "password": "Password",
+    "privateKey": "Private key",
+    "privateKeyPath": "Private key path",
+    "browse": "Browse",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "saving": "Saving…"
+  },
+  "session": {
+    "close": "Close",
+    "disconnected": "Session disconnected",
+    "error": "Connection error",
+    "reconnect": "Reconnect",
+    "placeholder": "Select a host and click Connect"
+  },
+  "auth": {
+    "passwordTitle": "Password for {{name}}",
+    "passwordLabel": "Password",
+    "connect": "Connect",
+    "hostKeyChanged": "{{message}}\n\nThe host key has changed. Accept the new key and connect?",
+    "hostKeyChangedReconnect": "{{message}}\n\nThe host key has changed. Accept the new key and reconnect?",
+    "hostNotFound": "Host configuration not found",
+    "connectionFailed": "Connection failed",
+    "reconnectFailed": "Reconnection failed"
+  },
+  "common": {
+    "dismiss": "Dismiss",
+    "language": "Language"
+  }
+}

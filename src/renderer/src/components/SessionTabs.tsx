@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { UiSession } from '../hooks/useSessions'
 import { TerminalView } from './TerminalView'
 
@@ -22,6 +23,7 @@ export function SessionTabs({
   onReconnect,
   registerDataListener
 }: SessionTabsProps): React.JSX.Element {
+  const { t } = useTranslation()
   const activeSession = sessions.find((s) => s.sessionId === activeSessionId)
 
   return (
@@ -47,7 +49,7 @@ export function SessionTabs({
             <button
               type="button"
               className="session-tab-close"
-              aria-label={`Close ${session.title}`}
+              aria-label={`${t('session.close')} ${session.title}`}
               onClick={(e) => {
                 e.stopPropagation()
                 void onClose(session.sessionId)
@@ -65,15 +67,15 @@ export function SessionTabs({
             <div className="session-banner" role="alert">
               <span>
                 {activeSession.status === 'error'
-                  ? (activeSession.errorMessage ?? 'Connection error')
-                  : 'Session disconnected'}
+                  ? (activeSession.errorMessage ?? t('session.error'))
+                  : t('session.disconnected')}
               </span>
               <button
                 type="button"
                 className="btn-primary btn-sm"
                 onClick={() => onReconnect(activeSession)}
               >
-                Reconnect
+                {t('session.reconnect')}
               </button>
             </div>
           )}

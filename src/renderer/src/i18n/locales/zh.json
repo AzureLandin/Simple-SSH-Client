@@ -1,0 +1,49 @@
+{
+  "hosts": {
+    "title": "主机",
+    "new": "新建主机",
+    "empty": "暂无主机",
+    "connect": "连接",
+    "edit": "编辑",
+    "delete": "删除",
+    "deleteConfirm": "确定删除主机「{{name}}」？"
+  },
+  "form": {
+    "newTitle": "新建主机",
+    "editTitle": "编辑主机",
+    "name": "名称",
+    "host": "主机",
+    "port": "端口",
+    "username": "用户名",
+    "auth": "认证方式",
+    "password": "密码",
+    "privateKey": "私钥",
+    "privateKeyPath": "私钥路径",
+    "browse": "浏览",
+    "cancel": "取消",
+    "save": "保存",
+    "create": "创建",
+    "saving": "保存中…"
+  },
+  "session": {
+    "close": "关闭",
+    "disconnected": "会话已断开",
+    "error": "连接错误",
+    "reconnect": "重新连接",
+    "placeholder": "选择主机并点击连接"
+  },
+  "auth": {
+    "passwordTitle": "输入 {{name}} 的密码",
+    "passwordLabel": "密码",
+    "connect": "连接",
+    "hostKeyChanged": "{{message}}\n\n主机密钥已变更。是否接受新密钥并连接？",
+    "hostKeyChangedReconnect": "{{message}}\n\n主机密钥已变更。是否接受新密钥并重新连接？",
+    "hostNotFound": "未找到主机配置",
+    "connectionFailed": "连接失败",
+    "reconnectFailed": "重连失败"
+  },
+  "common": {
+    "dismiss": "关闭",
+    "language": "语言"
+  }
+}

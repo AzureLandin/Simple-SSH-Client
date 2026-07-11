@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC, type ConnectOptions, type ElectronApi, type HostInput } from '../shared/types'
+import {
+  IPC,
+  type AppSettings,
+  type ConnectOptions,
+  type ElectronApi,
+  type HostInput
+} from '../shared/types'
 
 const api: ElectronApi = {
   hosts: {
@@ -30,6 +36,10 @@ const api: ElectronApi = {
       ipcRenderer.on(IPC.sessionError, listener)
       return () => ipcRenderer.removeListener(IPC.sessionError, listener)
     }
+  },
+  settings: {
+    get: () => ipcRenderer.invoke(IPC.settingsGet),
+    set: (patch: Partial<AppSettings>) => ipcRenderer.invoke(IPC.settingsSet, patch)
   },
   dialog: {
     openPrivateKeyFile: () => ipcRenderer.invoke(IPC.dialogOpenPrivateKey)
