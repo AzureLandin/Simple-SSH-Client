@@ -48,6 +48,7 @@ export class SessionManager {
       this.send(IPC.sessionData, { sessionId, data })
     })
     client.onClose(() => {
+      if (!this.sessions.has(sessionId)) return
       this.sessions.delete(sessionId)
       this.send(IPC.sessionClosed, { sessionId })
     })
@@ -66,8 +67,8 @@ export class SessionManager {
   disconnect(sessionId: string): void {
     const session = this.sessions.get(sessionId)
     if (!session) return
-    session.client.dispose()
     this.sessions.delete(sessionId)
+    session.client.dispose()
     this.send(IPC.sessionClosed, { sessionId })
   }
 

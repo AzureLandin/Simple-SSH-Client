@@ -91,8 +91,14 @@ export class SshClient {
   }
 
   onClose(cb: () => void): void {
-    this.stream?.on('close', cb)
-    this.client?.on('close', cb)
+    let closed = false
+    const once = (): void => {
+      if (closed) return
+      closed = true
+      cb()
+    }
+    this.stream?.on('close', once)
+    this.client?.on('close', once)
   }
 
   dispose(): void {
