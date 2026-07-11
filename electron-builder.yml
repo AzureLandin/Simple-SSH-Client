@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: app
+appId: com.sshclient.app
+productName: SSH Client
 directories:
   buildResources: build
 files:
@@ -12,7 +12,10 @@ files:
 asarUnpack:
   - 'resources/**'
 win:
-  executableName: app
+  executableName: ssh-client
+  target:
+    - nsis
+    - portable
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
