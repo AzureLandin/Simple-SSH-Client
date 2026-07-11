@@ -11,6 +11,13 @@ import { SettingsStore } from './settings-store'
 import { SftpService } from './sftp-service'
 import { createCredentialSafeStorage, registerIpc } from './ipc'
 
+const mcpMode = process.argv.includes('--mcp')
+
+/** Keep MCP stdio clean — never write logs to stdout in MCP mode. */
+function mcpLog(message: string): void {
+  if (mcpMode) process.stderr.write(`[nodeshell-mcp] ${message}\n`)
+}
+
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
@@ -33,7 +40,6 @@ function createWindow(): void {
     mainWindow?.show()
   })
 
-  // Keep page zoom fixed so Ctrl+wheel can resize terminal font instead.
   void mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -48,12 +54,8 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.nodeshell.app')
-
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
 
   const store = new ConnectionStore(join(app.getPath('userData'), 'hosts.json'))
   const knownHosts = new KnownHosts(join(app.getPath('userData'), 'known_hosts.json'))
@@ -62,6 +64,21 @@ app.whenReady().then(() => {
     join(app.getPath('userData'), 'credentials.json'),
     createCredentialSafeStorage()
   )
+
+  if (mcpMode) {
+    mcpLog(`starting stdio MCP (userData=${app.getPath('userData')})`)
+    const { startMcpServer } = await import('./mcp-server')
+    await startMcpServer({ hosts: store, credentials, knownHosts })
+    mcpLog('MCP server connected on stdio')
+    return
+  }
+
+  app.on('browser-window-created', (_, window) => {
+    optimizer.watchWindowShortcuts(window)
+  })
+
+  // Touch settings store so defaults exist after first GUI launch.
+  void settings.get()
 
   createWindow()
 
@@ -87,6 +104,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  if (mcpMode) return
   if (process.platform !== 'darwin') {
     app.quit()
   }

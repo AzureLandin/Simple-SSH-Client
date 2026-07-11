@@ -20,15 +20,18 @@
         "build:mac": "electron-vite build && electron-builder --mac",
         "build:linux": "electron-vite build && electron-builder --linux",
         "test": "vitest run",
-        "test:watch": "vitest"
+        "test:watch": "vitest",
+        "mcp": "npm run build && electron . --mcp"
     },
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
+        "@modelcontextprotocol/sdk": "^1.29.0",
         "font-list": "^2.1.0",
         "i18next": "^26.3.6",
         "react-i18next": "^17.0.9",
-        "ssh2": "^1.17.0"
+        "ssh2": "^1.17.0",
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "@electron-toolkit/eslint-config-prettier": "^3.0.0",
