@@ -1,3 +1,4 @@
+import net from 'node:net'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
@@ -5,6 +6,13 @@ import type { ConnectionStore } from './connection-store'
 import type { CredentialStore } from './credential-store'
 import type { KnownHosts } from './known-hosts'
 import { McpRuntime } from './mcp-runtime'
+
+function connectMcpSocket(port: number): Promise<net.Socket> {
+  return new Promise((resolve, reject) => {
+    const socket = net.connect({ host: '127.0.0.1', port }, () => resolve(socket))
+    socket.once('error', reject)
+  })
+}
 
 function text(data: unknown): { content: Array<{ type: 'text'; text: string }> } {
   return {
@@ -22,11 +30,14 @@ function toolError(err: unknown): {
   }
 }
 
-export async function startMcpServer(deps: {
-  hosts: ConnectionStore
-  credentials: CredentialStore
-  knownHosts: KnownHosts
-}): Promise<void> {
+export async function startMcpServer(
+  deps: {
+    hosts: ConnectionStore
+    credentials: CredentialStore
+    knownHosts: KnownHosts
+  },
+  options?: { socketPort?: number }
+): Promise<void> {
   const runtime = new McpRuntime(deps.hosts, deps.credentials, deps.knownHosts)
   const server = new McpServer({ name: 'nodeshell', version: '1.0.0' })
 
@@ -197,7 +208,13 @@ export async function startMcpServer(deps: {
     }
   )
 
-  const transport = new StdioServerTransport()
+  let transport: StdioServerTransport
+  if (options?.socketPort != null) {
+    const socket = await connectMcpSocket(options.socketPort)
+    transport = new StdioServerTransport(socket, socket)
+  } else {
+    transport = new StdioServerTransport()
+  }
   await server.connect(transport)
 
   const shutdown = (): void => {

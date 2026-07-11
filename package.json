@@ -21,7 +21,7 @@
         "build:linux": "electron-vite build && electron-builder --linux",
         "test": "vitest run",
         "test:watch": "vitest",
-        "mcp": "npm run build && electron . --mcp"
+        "mcp": "npm run build && node ./scripts/nodeshell-mcp.mjs"
     },
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.2",
