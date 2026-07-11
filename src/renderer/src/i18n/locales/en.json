@@ -40,7 +40,9 @@
     "hostKeyChangedReconnect": "{{message}}\n\nThe host key has changed. Accept the new key and reconnect?",
     "hostNotFound": "Host configuration not found",
     "connectionFailed": "Connection failed",
-    "reconnectFailed": "Reconnection failed"
+    "reconnectFailed": "Reconnection failed",
+    "saveCredentials": "Save login credentials for \"{{name}}\"?\nPassword or private key will be stored using OS encryption.",
+    "credentialsUnavailable": "Secure credential storage is unavailable on this system"
   },
   "common": {
     "dismiss": "Dismiss",

@@ -80,6 +80,15 @@ export interface ElectronApi {
     get: () => Promise<AppSettings>
     set: (patch: Partial<AppSettings>) => Promise<AppSettings>
   }
+  credentials: {
+    isAvailable: () => Promise<boolean>
+    save: (
+      hostId: string,
+      payload: { password?: string; privateKeyPath?: string }
+    ) => Promise<void>
+    clear: (hostId: string) => Promise<void>
+    markPrompted: (hostId: string, saved: boolean) => Promise<void>
+  }
   dialog: {
     openPrivateKeyFile: () => Promise<string | null>
   }
@@ -99,5 +108,9 @@ export const IPC = {
   sessionError: 'session:error',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
+  credentialsIsAvailable: 'credentials:isAvailable',
+  credentialsSave: 'credentials:save',
+  credentialsClear: 'credentials:clear',
+  credentialsMarkPrompted: 'credentials:markPrompted',
   dialogOpenPrivateKey: 'dialog:openPrivateKey'
 } as const

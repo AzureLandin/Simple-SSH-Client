@@ -41,6 +41,13 @@ const api: ElectronApi = {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
     set: (patch: Partial<AppSettings>) => ipcRenderer.invoke(IPC.settingsSet, patch)
   },
+  credentials: {
+    isAvailable: () => ipcRenderer.invoke(IPC.credentialsIsAvailable),
+    save: (hostId, payload) => ipcRenderer.invoke(IPC.credentialsSave, hostId, payload),
+    clear: (hostId) => ipcRenderer.invoke(IPC.credentialsClear, hostId),
+    markPrompted: (hostId, saved) =>
+      ipcRenderer.invoke(IPC.credentialsMarkPrompted, hostId, saved)
+  },
   dialog: {
     openPrivateKeyFile: () => ipcRenderer.invoke(IPC.dialogOpenPrivateKey)
   }

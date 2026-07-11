@@ -8,6 +8,8 @@ import type { KnownHosts } from './known-hosts'
 export interface SshConnectParams {
   host: HostConfig
   password?: string
+  /** In-memory private key PEM/contents; preferred over host.privateKeyPath when set */
+  privateKey?: string
   acceptHostKey?: boolean
   cols?: number
   rows?: number
@@ -20,7 +22,7 @@ export class SshClient {
   constructor(private readonly knownHosts: KnownHosts) {}
 
   async connect(params: SshConnectParams): Promise<void> {
-    const { host, password, acceptHostKey, cols = 80, rows = 24 } = params
+    const { host, password, privateKey, acceptHostKey, cols = 80, rows = 24 } = params
 
     let fingerprint = ''
     const config: ConnectConfig = {
@@ -36,10 +38,13 @@ export class SshClient {
     }
 
     if (host.authMethod === 'privateKey') {
-      if (!host.privateKeyPath) {
+      if (privateKey) {
+        config.privateKey = Buffer.from(privateKey, 'utf8')
+      } else if (host.privateKeyPath) {
+        config.privateKey = await readFile(host.privateKeyPath)
+      } else {
         throw { code: 'AUTH_FAILED', message: 'Private key path missing' }
       }
-      config.privateKey = await readFile(host.privateKeyPath)
     } else {
       config.password = password
     }
@@ -99,6 +104,11 @@ export class SshClient {
     }
     this.stream?.on('close', once)
     this.client?.on('close', once)
+  }
+
+  /** Underlying ssh2 client for SFTP */
+  getRawClient(): Client | null {
+    return this.client
   }
 
   dispose(): void {

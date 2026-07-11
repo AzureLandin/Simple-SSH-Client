@@ -40,7 +40,9 @@
     "hostKeyChangedReconnect": "{{message}}\n\n主机密钥已变更。是否接受新密钥并重新连接？",
     "hostNotFound": "未找到主机配置",
     "connectionFailed": "连接失败",
-    "reconnectFailed": "重连失败"
+    "reconnectFailed": "重连失败",
+    "saveCredentials": "是否保存主机「{{name}}」的登录凭据？\n密码或私钥将使用系统加密安全存储。",
+    "credentialsUnavailable": "当前系统无法安全保存凭据"
   },
   "common": {
     "dismiss": "关闭",

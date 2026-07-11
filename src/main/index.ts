@@ -3,10 +3,11 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { ConnectionStore } from './connection-store'
+import { CredentialStore } from './credential-store'
 import { KnownHosts } from './known-hosts'
 import { SessionManager } from './session-manager'
 import { SettingsStore } from './settings-store'
-import { registerIpc } from './ipc'
+import { createCredentialSafeStorage, registerIpc } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -51,11 +52,15 @@ app.whenReady().then(() => {
   const store = new ConnectionStore(join(app.getPath('userData'), 'hosts.json'))
   const knownHosts = new KnownHosts(join(app.getPath('userData'), 'known_hosts.json'))
   const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'))
+  const credentials = new CredentialStore(
+    join(app.getPath('userData'), 'credentials.json'),
+    createCredentialSafeStorage()
+  )
 
   createWindow()
 
-  const sessions = new SessionManager(store, knownHosts, () => mainWindow)
-  registerIpc(store, sessions, settings)
+  const sessions = new SessionManager(store, knownHosts, credentials, () => mainWindow)
+  registerIpc(store, sessions, settings, credentials)
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

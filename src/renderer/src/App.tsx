@@ -63,7 +63,7 @@ function PasswordModal({
 
 function App(): React.JSX.Element {
   const { t } = useTranslation()
-  const { hosts, error: hostsError, create, update, remove } = useHosts()
+  const { hosts, error: hostsError, create, update, remove, refresh } = useHosts()
   const {
     sessions,
     activeSessionId,
@@ -114,6 +114,7 @@ function App(): React.JSX.Element {
     try {
       await connect(host, options)
       setPasswordAction(null)
+      await maybePromptSaveCredentials(host, options?.password)
     } catch (e) {
       if (e instanceof ConnectError && e.code === 'HOST_KEY_CHANGED') {
         const accept = window.confirm(
@@ -130,6 +131,36 @@ function App(): React.JSX.Element {
       setToast(message)
     } finally {
       setConnecting(false)
+    }
+  }
+
+  const maybePromptSaveCredentials = async (
+    host: HostConfig,
+    password?: string
+  ): Promise<void> => {
+    const latest = (await window.api.hosts.list()).find((h) => h.id === host.id) ?? host
+    if (latest.credentialsPrompted) return
+    const save = window.confirm(t('auth.saveCredentials', { name: latest.name }))
+    if (!save) {
+      await window.api.credentials.markPrompted(latest.id, false)
+      await refresh()
+      return
+    }
+    try {
+      const available = await window.api.credentials.isAvailable()
+      if (!available) {
+        setToast(t('auth.credentialsUnavailable'))
+        await window.api.credentials.markPrompted(latest.id, false)
+        await refresh()
+        return
+      }
+      await window.api.credentials.save(latest.id, {
+        ...(password ? { password } : {}),
+        ...(latest.privateKeyPath ? { privateKeyPath: latest.privateKeyPath } : {})
+      })
+      await refresh()
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : t('auth.credentialsUnavailable'))
     }
   }
 
@@ -163,7 +194,7 @@ function App(): React.JSX.Element {
 
   const handleConnect = (host: HostConfig): void => {
     if (connecting) return
-    if (host.authMethod === 'password') {
+    if (host.authMethod === 'password' && !host.credentialsSaved) {
       setPasswordAction({ type: 'connect', host })
       return
     }
@@ -186,7 +217,7 @@ function App(): React.JSX.Element {
       setToast(t('auth.hostNotFound'))
       return
     }
-    if (host.authMethod === 'password') {
+    if (host.authMethod === 'password' && !host.credentialsSaved) {
       setPasswordAction({ type: 'reconnect', host, session })
       return
     }
