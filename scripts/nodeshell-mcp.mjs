@@ -36,6 +36,9 @@ if (!existsSync(electronLaunch)) {
 let electronChild = null
 let relaySocket = null
 let connected = false
+/** Buffer stdin until Electron connects — do not resume() early or bytes are discarded. */
+const stdinChunks = []
+let stdinEnded = false
 
 function killElectron() {
   if (electronChild && !electronChild.killed) {
@@ -60,6 +63,41 @@ function cleanupAndExit(code = 0) {
   process.exit(code)
 }
 
+process.stdin.on('data', (chunk) => {
+  if (relaySocket) {
+    relaySocket.write(chunk)
+  } else {
+    stdinChunks.push(chunk)
+  }
+})
+process.stdin.on('end', () => {
+  stdinEnded = true
+  if (relaySocket) {
+    try {
+      relaySocket.end()
+    } catch {
+      /* ignore */
+    }
+    killElectron()
+  }
+})
+process.stdin.on('close', () => {
+  if (relaySocket) {
+    try {
+      relaySocket.destroy()
+    } catch {
+      /* ignore */
+    }
+    killElectron()
+  }
+})
+process.stdin.on('error', (err) => {
+  process.stderr.write(`[nodeshell-mcp] stdin error: ${err.message}\n`)
+})
+process.stdout.on('error', (err) => {
+  process.stderr.write(`[nodeshell-mcp] stdout error: ${err.message}\n`)
+})
+
 const server = createServer((socket) => {
   if (connected) {
     socket.destroy()
@@ -73,27 +111,21 @@ const server = createServer((socket) => {
     process.stderr.write(`[nodeshell-mcp] socket error: ${err.message}\n`)
   })
 
-  process.stdin.on('error', (err) => {
-    process.stderr.write(`[nodeshell-mcp] stdin error: ${err.message}\n`)
-  })
-  process.stdout.on('error', (err) => {
-    process.stderr.write(`[nodeshell-mcp] stdout error: ${err.message}\n`)
-  })
+  // Flush any stdin that arrived before Electron connected, then keep relaying.
+  for (const chunk of stdinChunks) {
+    socket.write(chunk)
+  }
+  stdinChunks.length = 0
+  if (stdinEnded) {
+    socket.end()
+  }
 
-  // Bidirectional raw-byte relay: OpenCode stdin ↔ Electron socket ↔ stdout
-  process.stdin.pipe(socket)
+  // Electron → OpenCode
   socket.pipe(process.stdout)
 
-  const onStdinGone = () => {
-    try {
-      socket.destroy()
-    } catch {
-      /* ignore */
-    }
+  socket.on('close', () => {
     killElectron()
-  }
-  process.stdin.on('end', onStdinGone)
-  process.stdin.on('close', onStdinGone)
+  })
 })
 
 server.on('error', (err) => {
@@ -144,6 +176,3 @@ server.listen(0, '127.0.0.1', () => {
     process.exit(code ?? (signal ? 1 : 0))
   })
 })
-
-// Keep alive until Electron exits
-process.stdin.resume()
