@@ -78,7 +78,7 @@ app.whenReady().then(async () => {
     mcpLog(`starting MCP on ${via} (userData=${app.getPath('userData')})`)
     const { startMcpServer } = await import('./mcp-server')
     await startMcpServer(
-      { hosts: store, credentials, knownHosts },
+      { hosts: store, credentials, knownHosts, settings },
       mcpSocketPort != null && Number.isFinite(mcpSocketPort)
         ? { socketPort: mcpSocketPort }
         : undefined

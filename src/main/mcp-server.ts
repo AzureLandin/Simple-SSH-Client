@@ -5,6 +5,7 @@ import { z } from 'zod'
 import type { ConnectionStore } from './connection-store'
 import type { CredentialStore } from './credential-store'
 import type { KnownHosts } from './known-hosts'
+import type { SettingsStore } from './settings-store'
 import { McpRuntime } from './mcp-runtime'
 
 function connectMcpSocket(port: number): Promise<net.Socket> {
@@ -35,10 +36,17 @@ export async function startMcpServer(
     hosts: ConnectionStore
     credentials: CredentialStore
     knownHosts: KnownHosts
+    settings: SettingsStore
   },
   options?: { socketPort?: number }
 ): Promise<void> {
-  const runtime = new McpRuntime(deps.hosts, deps.credentials, deps.knownHosts)
+  const runtime = new McpRuntime(deps.hosts, deps.credentials, deps.knownHosts, async () => {
+    const s = await deps.settings.get()
+    return {
+      idleTimeoutMs: s.mcpIdleTimeoutMinutes * 60_000,
+      maxSessions: s.mcpMaxSessions
+    }
+  })
   const server = new McpServer({ name: 'nodeshell', version: '1.0.0' })
 
   server.tool('list_hosts', 'List saved SSH hosts (no secrets).', async () => {

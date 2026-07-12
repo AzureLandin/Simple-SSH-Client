@@ -730,6 +730,13 @@ button.sftp-item-main {
   color: #ccc;
 }
 
+.settings-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #999;
+}
+
 .settings-modal .form-field select,
 .settings-modal .form-field input[type='number'] {
   width: 100%;

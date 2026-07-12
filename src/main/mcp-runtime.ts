@@ -8,14 +8,21 @@ import type { KnownHosts } from './known-hosts'
 import { SftpService } from './sftp-service'
 import { SshClient } from './ssh-client'
 
+export interface McpSessionPolicy {
+  idleTimeoutMs: number
+  maxSessions: number
+}
+
 interface McpSession {
   id: string
   hostId: string
   title: string
   client: SshClient
+  lastActiveAt: number
 }
 
 const MAX_READ_BYTES = 512 * 1024
+const IDLE_CHECK_INTERVAL_MS = 15_000
 
 function errMessage(err: unknown): string {
   if (err && typeof err === 'object' && 'message' in err) {
@@ -28,13 +35,22 @@ function errMessage(err: unknown): string {
 export class McpRuntime {
   private sessions = new Map<string, McpSession>()
   private readonly sftp: SftpService
+  private idleTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(
     private readonly hosts: ConnectionStore,
     private readonly credentials: CredentialStore,
-    private readonly knownHosts: KnownHosts
+    private readonly knownHosts: KnownHosts,
+    private readonly getPolicy: () => Promise<McpSessionPolicy>
   ) {
     this.sftp = new SftpService((sessionId) => this.getClient(sessionId), () => null)
+    this.idleTimer = setInterval(() => {
+      void this.reapIdleSessions()
+    }, IDLE_CHECK_INTERVAL_MS)
+    // Allow process to exit even if the timer is still scheduled.
+    if (typeof this.idleTimer === 'object' && this.idleTimer && 'unref' in this.idleTimer) {
+      this.idleTimer.unref()
+    }
   }
 
   listHosts(): Promise<HostConfig[]> {
@@ -52,6 +68,7 @@ export class McpRuntime {
   getClient(sessionId: string): SshClient {
     const s = this.sessions.get(sessionId)
     if (!s) throw { code: 'SESSION_NOT_FOUND', message: `Session not found: ${sessionId}` }
+    s.lastActiveAt = Date.now()
     return s.client
   }
 
@@ -59,6 +76,14 @@ export class McpRuntime {
     hostId: string,
     options: ConnectOptions = {}
   ): Promise<{ sessionId: string; title: string }> {
+    const { maxSessions } = await this.getPolicy()
+    if (this.sessions.size >= maxSessions) {
+      throw {
+        code: 'MCP_SESSION_LIMIT',
+        message: `Too many MCP sessions (max ${maxSessions}); disconnect one first`
+      }
+    }
+
     const host = await this.hosts.getById(hostId)
     if (!host) throw { code: 'UNKNOWN', message: `Host not found: ${hostId}` }
 
@@ -79,7 +104,13 @@ export class McpRuntime {
     }
 
     const title = `${host.username}@${host.host}`
-    this.sessions.set(sessionId, { id: sessionId, hostId, title, client })
+    this.sessions.set(sessionId, {
+      id: sessionId,
+      hostId,
+      title,
+      client,
+      lastActiveAt: Date.now()
+    })
     client.onClose(() => {
       this.sessions.delete(sessionId)
       this.sftp.dispose(sessionId)
@@ -94,6 +125,32 @@ export class McpRuntime {
     this.sessions.delete(sessionId)
     this.sftp.dispose(sessionId)
     s.client.dispose()
+  }
+
+  async reapIdleSessions(now = Date.now()): Promise<string[]> {
+    const { idleTimeoutMs } = await this.getPolicy()
+    const closed: string[] = []
+    for (const s of [...this.sessions.values()]) {
+      if (now - s.lastActiveAt >= idleTimeoutMs) {
+        closed.push(s.id)
+        this.disconnectSession(s.id)
+      }
+    }
+    return closed
+  }
+
+  /** Test helper: override last-active timestamp. */
+  setLastActiveAtForTest(sessionId: string, lastActiveAt: number): void {
+    const s = this.sessions.get(sessionId)
+    if (s) s.lastActiveAt = lastActiveAt
+  }
+
+  /** Test helper: register a fake session without SSH. */
+  addSessionForTest(session: Omit<McpSession, 'lastActiveAt'> & { lastActiveAt?: number }): void {
+    this.sessions.set(session.id, {
+      ...session,
+      lastActiveAt: session.lastActiveAt ?? Date.now()
+    })
   }
 
   async runCommand(sessionId: string, command: string, timeoutMs = 60000): Promise<string> {
@@ -174,6 +231,10 @@ export class McpRuntime {
   }
 
   disposeAll(): void {
+    if (this.idleTimer != null) {
+      clearInterval(this.idleTimer)
+      this.idleTimer = null
+    }
     for (const id of [...this.sessions.keys()]) {
       this.disconnectSession(id)
     }

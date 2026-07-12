@@ -97,6 +97,8 @@ function App(): React.JSX.Element {
   const [language, setLanguage] = useState<LanguageCode>('zh')
   const [terminalFontFamily, setTerminalFontFamily] = useState('Hack')
   const [terminalFontSize, setTerminalFontSize] = useState(14)
+  const [mcpIdleTimeoutMinutes, setMcpIdleTimeoutMinutes] = useState(10)
+  const [mcpMaxSessions, setMcpMaxSessions] = useState(8)
   const [sftpExpanded, setSftpExpanded] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [hostsOpen, setHostsOpen] = useState(false)
@@ -111,11 +113,15 @@ function App(): React.JSX.Element {
         setLanguage(settings.language)
         setTerminalFontFamily(settings.terminalFontFamily)
         setTerminalFontSize(settings.terminalFontSize)
+        setMcpIdleTimeoutMinutes(settings.mcpIdleTimeoutMinutes)
+        setMcpMaxSessions(settings.mcpMaxSessions)
         await i18n.changeLanguage(settings.language)
       } catch {
         setLanguage('zh')
         setTerminalFontFamily('Hack')
         setTerminalFontSize(14)
+        setMcpIdleTimeoutMinutes(10)
+        setMcpMaxSessions(8)
         await i18n.changeLanguage('zh')
       }
     })()
@@ -159,6 +165,30 @@ function App(): React.JSX.Element {
       setTerminalFontSize(saved.terminalFontSize)
     } catch {
       setTerminalFontSize(previous)
+      setToast(t('auth.connectionFailed'))
+    }
+  }
+
+  const handleMcpIdleTimeoutMinutesChange = async (next: number): Promise<void> => {
+    const previous = mcpIdleTimeoutMinutes
+    setMcpIdleTimeoutMinutes(next)
+    try {
+      const saved = await window.api.settings.set({ mcpIdleTimeoutMinutes: next })
+      setMcpIdleTimeoutMinutes(saved.mcpIdleTimeoutMinutes)
+    } catch {
+      setMcpIdleTimeoutMinutes(previous)
+      setToast(t('auth.connectionFailed'))
+    }
+  }
+
+  const handleMcpMaxSessionsChange = async (next: number): Promise<void> => {
+    const previous = mcpMaxSessions
+    setMcpMaxSessions(next)
+    try {
+      const saved = await window.api.settings.set({ mcpMaxSessions: next })
+      setMcpMaxSessions(saved.mcpMaxSessions)
+    } catch {
+      setMcpMaxSessions(previous)
       setToast(t('auth.connectionFailed'))
     }
   }
@@ -369,9 +399,13 @@ function App(): React.JSX.Element {
           language={language}
           terminalFontFamily={terminalFontFamily}
           terminalFontSize={terminalFontSize}
+          mcpIdleTimeoutMinutes={mcpIdleTimeoutMinutes}
+          mcpMaxSessions={mcpMaxSessions}
           onLanguageChange={(lang) => void handleLanguageChange(lang)}
           onTerminalFontFamilyChange={(family) => void handleTerminalFontFamilyChange(family)}
           onTerminalFontSizeChange={(size) => void handleTerminalFontSizeChange(size)}
+          onMcpIdleTimeoutMinutesChange={(minutes) => void handleMcpIdleTimeoutMinutesChange(minutes)}
+          onMcpMaxSessionsChange={(max) => void handleMcpMaxSessionsChange(max)}
           onClose={() => setSettingsOpen(false)}
         />
       )}

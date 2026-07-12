@@ -6,6 +6,10 @@ export interface AppSettings {
   language: LanguageCode
   terminalFontFamily: string
   terminalFontSize: number
+  /** MCP SSH session idle timeout in minutes (default 10). */
+  mcpIdleTimeoutMinutes: number
+  /** Max concurrent MCP SSH sessions (default 8). */
+  mcpMaxSessions: number
 }
 
 export interface HostConfig {
@@ -32,6 +36,7 @@ export type SshErrorCode =
   | 'CONFIG_READ_FAILED'
   | 'CONFIG_WRITE_FAILED'
   | 'SESSION_NOT_FOUND'
+  | 'MCP_SESSION_LIMIT'
   | 'UNKNOWN'
 
 export interface AppError {

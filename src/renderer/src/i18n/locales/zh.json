@@ -59,7 +59,11 @@
     "title": "设置",
     "terminal": "终端",
     "fontFamily": "字体",
-    "fontSize": "字号"
+    "fontSize": "字号",
+    "mcp": "MCP",
+    "mcpIdleTimeout": "会话空闲超时（分钟）",
+    "mcpMaxSessions": "最大同时会话数",
+    "mcpHint": "控制 Agent 通过 MCP 连接 SSH 时的空闲断开与并发上限。"
   },
   "sidebar": {
     "placeholderTitle": "监控",

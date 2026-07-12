@@ -6,19 +6,30 @@ interface SettingsModalProps {
   language: LanguageCode
   terminalFontFamily: string
   terminalFontSize: number
+  mcpIdleTimeoutMinutes: number
+  mcpMaxSessions: number
   onLanguageChange: (language: LanguageCode) => void
   onTerminalFontFamilyChange: (family: string) => void
   onTerminalFontSizeChange: (size: number) => void
+  onMcpIdleTimeoutMinutesChange: (minutes: number) => void
+  onMcpMaxSessionsChange: (max: number) => void
   onClose: () => void
 }
+
+const IDLE_TIMEOUT_OPTIONS = [1, 5, 10, 15, 30, 60, 120]
+const MAX_SESSION_OPTIONS = [1, 2, 4, 8, 16, 32]
 
 export function SettingsModal({
   language,
   terminalFontFamily,
   terminalFontSize,
+  mcpIdleTimeoutMinutes,
+  mcpMaxSessions,
   onLanguageChange,
   onTerminalFontFamilyChange,
   onTerminalFontSizeChange,
+  onMcpIdleTimeoutMinutesChange,
+  onMcpMaxSessionsChange,
   onClose
 }: SettingsModalProps): React.JSX.Element {
   const { t } = useTranslation()
@@ -117,6 +128,61 @@ export function SettingsModal({
                 onTerminalFontSizeChange(n)
               }}
             />
+          </label>
+        </fieldset>
+
+        <fieldset className="settings-section">
+          <legend>{t('settings.mcp')}</legend>
+          <p className="settings-hint">{t('settings.mcpHint')}</p>
+
+          <label className="form-field">
+            <span>{t('settings.mcpIdleTimeout')}</span>
+            <select
+              value={String(
+                IDLE_TIMEOUT_OPTIONS.includes(mcpIdleTimeoutMinutes)
+                  ? mcpIdleTimeoutMinutes
+                  : Math.min(120, Math.max(1, mcpIdleTimeoutMinutes))
+              )}
+              onChange={(e) => {
+                const n = Number(e.target.value)
+                if (!Number.isFinite(n)) return
+                onMcpIdleTimeoutMinutesChange(n)
+              }}
+            >
+              {(IDLE_TIMEOUT_OPTIONS.includes(mcpIdleTimeoutMinutes)
+                ? IDLE_TIMEOUT_OPTIONS
+                : [...IDLE_TIMEOUT_OPTIONS, mcpIdleTimeoutMinutes].sort((a, b) => a - b)
+              ).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="form-field">
+            <span>{t('settings.mcpMaxSessions')}</span>
+            <select
+              value={String(
+                MAX_SESSION_OPTIONS.includes(mcpMaxSessions)
+                  ? mcpMaxSessions
+                  : Math.min(32, Math.max(1, mcpMaxSessions))
+              )}
+              onChange={(e) => {
+                const n = Number(e.target.value)
+                if (!Number.isFinite(n)) return
+                onMcpMaxSessionsChange(n)
+              }}
+            >
+              {(MAX_SESSION_OPTIONS.includes(mcpMaxSessions)
+                ? MAX_SESSION_OPTIONS
+                : [...MAX_SESSION_OPTIONS, mcpMaxSessions].sort((a, b) => a - b)
+              ).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
           </label>
         </fieldset>
 

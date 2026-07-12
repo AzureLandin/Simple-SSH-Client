@@ -59,7 +59,11 @@
     "title": "Settings",
     "terminal": "Terminal",
     "fontFamily": "Font",
-    "fontSize": "Font size"
+    "fontSize": "Font size",
+    "mcp": "MCP",
+    "mcpIdleTimeout": "Session idle timeout (minutes)",
+    "mcpMaxSessions": "Max concurrent sessions",
+    "mcpHint": "Limits idle disconnect and concurrency for Agent SSH via MCP."
   },
   "sidebar": {
     "placeholderTitle": "Monitor",

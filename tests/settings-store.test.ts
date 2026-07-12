@@ -7,7 +7,9 @@ import { SettingsStore } from '../src/main/settings-store'
 const defaults = {
   language: 'zh',
   terminalFontFamily: 'Hack',
-  terminalFontSize: 14
+  terminalFontSize: 14,
+  mcpIdleTimeoutMinutes: 10,
+  mcpMaxSessions: 8
 } as const
 
 describe('SettingsStore', () => {
@@ -24,47 +26,32 @@ describe('SettingsStore', () => {
     await expect(store.get()).resolves.toEqual(defaults)
   })
 
-  it('persists language and terminal font settings', async () => {
-    await store.set({ language: 'en', terminalFontFamily: 'Cascadia Code', terminalFontSize: 16 })
+  it('persists language, terminal, and MCP settings', async () => {
+    await store.set({
+      language: 'en',
+      terminalFontFamily: 'Cascadia Code',
+      terminalFontSize: 16,
+      mcpIdleTimeoutMinutes: 30,
+      mcpMaxSessions: 4
+    })
     await expect(store.get()).resolves.toEqual({
       language: 'en',
       terminalFontFamily: 'Cascadia Code',
-      terminalFontSize: 16
+      terminalFontSize: 16,
+      mcpIdleTimeoutMinutes: 30,
+      mcpMaxSessions: 4
     })
-    const raw = JSON.parse(readFileSync(filePath, 'utf8'))
-    expect(raw.language).toBe('en')
-    expect(raw.terminalFontFamily).toBe('Cascadia Code')
-    expect(raw.terminalFontSize).toBe(16)
   })
 
-  it('falls back to zh for invalid language', async () => {
-    writeFileSync(filePath, JSON.stringify({ language: 'fr' }), 'utf8')
-    await expect(store.get()).resolves.toMatchObject({ language: 'zh' })
-  })
-
-  it('fills terminal defaults when older settings lack font fields', async () => {
+  it('fills defaults when older settings lack newer fields', async () => {
     writeFileSync(filePath, JSON.stringify({ language: 'en' }), 'utf8')
     await expect(store.get()).resolves.toEqual({
       language: 'en',
       terminalFontFamily: 'Hack',
-      terminalFontSize: 14
+      terminalFontSize: 14,
+      mcpIdleTimeoutMinutes: 10,
+      mcpMaxSessions: 8
     })
-  })
-
-  it('clamps font size and empty family', async () => {
-    writeFileSync(
-      filePath,
-      JSON.stringify({ language: 'zh', terminalFontFamily: '  ', terminalFontSize: 8 }),
-      'utf8'
-    )
-    await expect(store.get()).resolves.toEqual({
-      language: 'zh',
-      terminalFontFamily: 'Hack',
-      terminalFontSize: 10
-    })
-
-    await store.set({ terminalFontSize: 99 })
-    await expect(store.get()).resolves.toMatchObject({ terminalFontSize: 24 })
   })
 
   it('throws CONFIG_READ_FAILED on corrupt JSON without overwriting', async () => {

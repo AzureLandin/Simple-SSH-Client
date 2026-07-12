@@ -5,11 +5,17 @@ import type { AppError, AppSettings, LanguageCode } from '../shared/types'
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'zh',
   terminalFontFamily: 'Hack',
-  terminalFontSize: 14
+  terminalFontSize: 14,
+  mcpIdleTimeoutMinutes: 10,
+  mcpMaxSessions: 8
 }
 
 const FONT_SIZE_MIN = 10
 const FONT_SIZE_MAX = 24
+export const MCP_IDLE_TIMEOUT_MIN = 1
+export const MCP_IDLE_TIMEOUT_MAX = 120
+export const MCP_MAX_SESSIONS_MIN = 1
+export const MCP_MAX_SESSIONS_MAX = 32
 
 function configError(code: AppError['code'], message: string): AppError {
   return { code, message }
@@ -31,11 +37,25 @@ export function normalizeTerminalFontSize(value: unknown): number {
   return Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, Math.round(n)))
 }
 
+export function normalizeMcpIdleTimeoutMinutes(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) return DEFAULT_SETTINGS.mcpIdleTimeoutMinutes
+  return Math.min(MCP_IDLE_TIMEOUT_MAX, Math.max(MCP_IDLE_TIMEOUT_MIN, Math.round(n)))
+}
+
+export function normalizeMcpMaxSessions(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) return DEFAULT_SETTINGS.mcpMaxSessions
+  return Math.min(MCP_MAX_SESSIONS_MAX, Math.max(MCP_MAX_SESSIONS_MIN, Math.round(n)))
+}
+
 function normalizeSettings(data: Partial<AppSettings>): AppSettings {
   return {
     language: normalizeLanguage(data.language),
     terminalFontFamily: normalizeTerminalFontFamily(data.terminalFontFamily),
-    terminalFontSize: normalizeTerminalFontSize(data.terminalFontSize)
+    terminalFontSize: normalizeTerminalFontSize(data.terminalFontSize),
+    mcpIdleTimeoutMinutes: normalizeMcpIdleTimeoutMinutes(data.mcpIdleTimeoutMinutes),
+    mcpMaxSessions: normalizeMcpMaxSessions(data.mcpMaxSessions)
   }
 }
 
@@ -55,7 +75,13 @@ export class SettingsStore {
           ? patch.terminalFontFamily
           : current.terminalFontFamily,
       terminalFontSize:
-        patch.terminalFontSize !== undefined ? patch.terminalFontSize : current.terminalFontSize
+        patch.terminalFontSize !== undefined ? patch.terminalFontSize : current.terminalFontSize,
+      mcpIdleTimeoutMinutes:
+        patch.mcpIdleTimeoutMinutes !== undefined
+          ? patch.mcpIdleTimeoutMinutes
+          : current.mcpIdleTimeoutMinutes,
+      mcpMaxSessions:
+        patch.mcpMaxSessions !== undefined ? patch.mcpMaxSessions : current.mcpMaxSessions
     })
     await this.write(next)
     return next
@@ -87,6 +113,10 @@ export class SettingsStore {
   private async write(data: AppSettings): Promise<void> {
     try {
       await mkdir(dirname(this.filePath), { recursive: true })
+    } catch {
+      /* ignore */
+    }
+    try {
       await writeFile(this.filePath, JSON.stringify(data, null, 2), 'utf8')
     } catch (err) {
       const e = err as Error
