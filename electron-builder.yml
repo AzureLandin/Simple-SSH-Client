@@ -18,9 +18,12 @@ extraResources:
     to: mcp/nodeshell-mcp.mjs
 win:
   executableName: NodeShell
+  icon: build/icon.ico
   target:
     - nsis
-  signAndEditExecutable: false
+  # Skip Authenticode signing only; still embed icon/version into the exe.
+  signExecutable: false
+  signAndEditExecutable: true
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
