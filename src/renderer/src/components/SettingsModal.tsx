@@ -5,6 +5,7 @@ import type {
   McpRegistrationTargetStatus,
   ThemePreference
 } from '../../../shared/types'
+import { AboutModal } from './AboutModal'
 import { ModalShell, useModalClose } from './ModalShell'
 import { Select } from './Select'
 
@@ -36,8 +37,9 @@ function SettingsModalBody({
   onTerminalFontFamilyChange,
   onTerminalFontSizeChange,
   onMcpIdleTimeoutMinutesChange,
-  onMcpMaxSessionsChange
-}: Omit<SettingsModalProps, 'onClose'>): React.JSX.Element {
+  onMcpMaxSessionsChange,
+  onOpenAbout
+}: Omit<SettingsModalProps, 'onClose'> & { onOpenAbout: () => void }): React.JSX.Element {
   const { t } = useTranslation()
   const requestClose = useModalClose()
   const [fonts, setFonts] = useState<string[]>([])
@@ -306,6 +308,9 @@ function SettingsModalBody({
       </div>
 
       <div className="form-actions">
+        <button type="button" className="btn-secondary" onClick={onOpenAbout}>
+          {t('about.open')}
+        </button>
         <button type="button" className="btn-primary" onClick={requestClose}>
           {t('common.dismiss')}
         </button>
@@ -316,9 +321,20 @@ function SettingsModalBody({
 
 export function SettingsModal(props: SettingsModalProps): React.JSX.Element {
   const { onClose, ...bodyProps } = props
+  const [showAbout, setShowAbout] = useState(false)
+
+  if (showAbout) {
+    return (
+      <AboutModal
+        onClose={onClose}
+        onBack={() => setShowAbout(false)}
+      />
+    )
+  }
+
   return (
     <ModalShell onClose={onClose} dialogClassName="settings-modal" labelledBy="settings-modal-title">
-      <SettingsModalBody {...bodyProps} />
+      <SettingsModalBody {...bodyProps} onOpenAbout={() => setShowAbout(true)} />
     </ModalShell>
   )
 }

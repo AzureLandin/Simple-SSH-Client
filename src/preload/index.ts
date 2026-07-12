@@ -44,6 +44,9 @@ const api: ElectronApi = {
   fonts: {
     list: () => ipcRenderer.invoke(IPC.fontsList)
   },
+  app: {
+    getVersion: () => ipcRenderer.invoke(IPC.appGetVersion)
+  },
   credentials: {
     isAvailable: () => ipcRenderer.invoke(IPC.credentialsIsAvailable),
     save: (hostId, payload) => ipcRenderer.invoke(IPC.credentialsSave, hostId, payload),

@@ -11,6 +11,18 @@ import { SettingsStore } from './settings-store'
 import { SftpService } from './sftp-service'
 import { createCredentialSafeStorage, registerIpc } from './ipc'
 
+// Unpackaged Electron defaults userData to ".../Electron"; pin to nodeshell so MCP and GUI share hosts.
+app.setPath('userData', join(app.getPath('appData'), 'nodeshell'))
+
+const mcpMode = process.argv.includes('--mcp')
+const mcpSocketArg = process.argv.find((a) => a.startsWith('--mcp-socket='))
+const mcpSocketPort = mcpSocketArg ? Number(mcpSocketArg.slice('--mcp-socket='.length)) : undefined
+
+/** Keep MCP stdio clean — never write logs to stdout in MCP mode. */
+function mcpLog(message: string): void {
+  if (mcpMode) process.stderr.write(`[nodeshell-mcp] ${message}\n`)
+}
+
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
@@ -48,12 +60,8 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.nodeshell.app')
-
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
 
   const store = new ConnectionStore(join(app.getPath('userData'), 'hosts.json'))
   const knownHosts = new KnownHosts(join(app.getPath('userData'), 'known_hosts.json'))
@@ -62,6 +70,30 @@ app.whenReady().then(() => {
     join(app.getPath('userData'), 'credentials.json'),
     createCredentialSafeStorage()
   )
+
+  if (mcpMode) {
+    const via =
+      mcpSocketPort != null && Number.isFinite(mcpSocketPort)
+        ? `socket :${mcpSocketPort}`
+        : 'stdio'
+    mcpLog(`starting MCP on ${via} (userData=${app.getPath('userData')})`)
+    const { startMcpServer } = await import('./mcp-server')
+    await startMcpServer(
+      { hosts: store, credentials, knownHosts, settings },
+      mcpSocketPort != null && Number.isFinite(mcpSocketPort)
+        ? { socketPort: mcpSocketPort }
+        : undefined
+    )
+    mcpLog(`MCP server connected on ${via}`)
+    return
+  }
+
+  app.on('browser-window-created', (_, window) => {
+    optimizer.watchWindowShortcuts(window)
+  })
+
+  // Touch settings store so defaults exist after first GUI launch.
+  void settings.get()
 
   createWindow()
 
@@ -87,6 +119,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  if (mcpMode) return
   if (process.platform !== 'darwin') {
     app.quit()
   }

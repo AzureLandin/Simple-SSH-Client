@@ -11,7 +11,8 @@ import {
   mergeMcpServersJson,
   mergeOpenCodeJson,
   McpRegistrationService,
-  pathsEqual
+  pathsEqual,
+  resolveMcpLauncherScript
 } from '../src/main/mcp-registration'
 
 describe('mcp-registration merges', () => {
@@ -76,6 +77,28 @@ describe('mcp-registration merges', () => {
 
   it('pathsEqual normalizes separators and case', () => {
     expect(pathsEqual('C:\\A\\b.mjs', 'c:/a/b.mjs')).toBe(true)
+  })
+})
+
+describe('resolveMcpLauncherScript', () => {
+  it('resolves packaged resources/mcp launcher before scripts/', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ns-mcp-pack-'))
+    const resources = join(root, 'resources')
+    const mcpDir = join(resources, 'mcp')
+    const scripts = join(root, 'scripts')
+    mkdirSync(mcpDir, { recursive: true })
+    mkdirSync(scripts, { recursive: true })
+    const packaged = join(mcpDir, 'nodeshell-mcp.mjs')
+    const dev = join(scripts, 'nodeshell-mcp.mjs')
+    writeFileSync(packaged, '// packaged\n', 'utf8')
+    writeFileSync(dev, '// dev\n', 'utf8')
+
+    const found = await resolveMcpLauncherScript({
+      appRoot: root,
+      isPackaged: true,
+      resourcesPath: resources
+    })
+    expect(pathsEqual(found!, packaged)).toBe(true)
   })
 })
 

@@ -170,6 +170,9 @@ export interface ElectronApi {
   fonts: {
     list: () => Promise<string[]>
   }
+  app: {
+    getVersion: () => Promise<string>
+  }
   mcpRegistration: {
     status: () => Promise<McpRegistrationTargetStatus[]>
     register: (
@@ -230,6 +233,7 @@ export const IPC = {
   monitorSetActive: 'monitor:setActive',
   monitorUpdate: 'monitor:update',
   fontsList: 'fonts:list',
+  appGetVersion: 'app:getVersion',
   mcpRegistrationStatus: 'mcpRegistration:status',
   mcpRegistrationRegister: 'mcpRegistration:register',
   mcpRegistrationClipboard: 'mcpRegistration:clipboardSnippet',

@@ -70,7 +70,7 @@
     "mcpMaxSessions": "最大同时会话数",
     "mcpHint": "控制 Agent 通过 MCP 连接 SSH 时的空闲断开与并发上限。",
     "mcpRegisterTitle": "注册到 Agent",
-    "mcpRegisterHint": "写入各 Agent 的用户全局 MCP 配置（不覆盖其它服务器）。需本机已安装 Node，且已构建 MCP 启动脚本。",
+    "mcpRegisterHint": "写入各 Agent 的用户全局 MCP 配置（不覆盖其它服务器）。需本机 PATH 上有 Node；安装包已内置 MCP 启动器，无需再编译。",
     "mcpRegisterAll": "全部注册",
     "mcpRegister": "注册",
     "mcpUpdate": "更新",
@@ -80,6 +80,16 @@
     "mcpStatusRegistered": "已注册",
     "mcpStatusMissing": "未注册",
     "mcpStatusStale": "路径需更新"
+  },
+  "about": {
+    "open": "关于",
+    "title": "关于 NodeShell",
+    "version": "版本 {{version}}",
+    "tagline": "桌面 SSH 客户端：终端、SFTP、监控与 MCP。",
+    "author": "作者",
+    "license": "开源协议",
+    "licenseNote": "本项目采用 MIT 协议开源，可自由使用、修改与分发。",
+    "back": "返回设置"
   },
   "sidebar": {
     "placeholderTitle": "监控",

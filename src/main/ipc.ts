@@ -1,6 +1,6 @@
 import { dialog, ipcMain, safeStorage, app } from 'electron'
 import { readFile, stat } from 'fs/promises'
-import { basename } from 'path'
+import { basename, dirname } from 'path'
 import type { ConnectionStore } from './connection-store'
 import type { CredentialStore } from './credential-store'
 import { McpRegistrationService } from './mcp-registration'
@@ -24,10 +24,11 @@ export function registerIpc(
   sftp: SftpService,
   monitor: MonitorService
 ): void {
-  const mcpRegistration = new McpRegistrationService(() => {
-    // Prefer cwd in electron-vite dev; fall back to app path.
-    return process.cwd() || app.getAppPath()
-  })
+  const mcpRegistration = new McpRegistrationService(() => ({
+    appRoot: app.isPackaged ? dirname(app.getPath('exe')) : process.cwd() || app.getAppPath(),
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath
+  }))
 
   ipcMain.handle(IPC.hostsList, async () => store.list())
   ipcMain.handle(IPC.hostsCreate, async (_e, input: HostInput) => store.create(input))
@@ -69,6 +70,8 @@ export function registerIpc(
       return []
     }
   })
+
+  ipcMain.handle(IPC.appGetVersion, async () => app.getVersion())
 
   ipcMain.handle(IPC.credentialsIsAvailable, async () => credentials.isAvailable())
   ipcMain.handle(

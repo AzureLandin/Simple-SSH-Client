@@ -58,14 +58,28 @@ export function configPathForTarget(
   }
 }
 
-export async function resolveMcpLauncherScript(appRoot: string): Promise<string | null> {
-  const candidates = [
-    join(appRoot, 'scripts', 'nodeshell-mcp.mjs'),
-    join(appRoot, '.worktrees', 'mcp-ssh-server', 'scripts', 'nodeshell-mcp.mjs'),
-    join(appRoot, '..', 'mcp-ssh-server', 'scripts', 'nodeshell-mcp.mjs'),
-    // Running GUI from a worktree sibling of mcp-ssh-server
-    join(appRoot, '..', '..', '.worktrees', 'mcp-ssh-server', 'scripts', 'nodeshell-mcp.mjs')
-  ]
+export interface McpAppPaths {
+  appRoot: string
+  isPackaged?: boolean
+  resourcesPath?: string
+}
+
+export async function resolveMcpLauncherScript(
+  paths: McpAppPaths | string
+): Promise<string | null> {
+  const opts: McpAppPaths = typeof paths === 'string' ? { appRoot: paths } : paths
+  const candidates: string[] = []
+  if (opts.isPackaged && opts.resourcesPath) {
+    candidates.push(join(opts.resourcesPath, 'mcp', 'nodeshell-mcp.mjs'))
+  }
+  candidates.push(
+    join(opts.appRoot, 'scripts', 'nodeshell-mcp.mjs'),
+    join(opts.appRoot, 'resources', 'mcp', 'nodeshell-mcp.mjs'),
+    // Legacy worktree layouts while MCP lived on a sibling branch
+    join(opts.appRoot, '.worktrees', 'mcp-ssh-server', 'scripts', 'nodeshell-mcp.mjs'),
+    join(opts.appRoot, '..', 'mcp-ssh-server', 'scripts', 'nodeshell-mcp.mjs'),
+    join(opts.appRoot, '..', '..', '.worktrees', 'mcp-ssh-server', 'scripts', 'nodeshell-mcp.mjs')
+  )
   for (const c of candidates) {
     try {
       await access(c, fsConstants.R_OK)
@@ -235,14 +249,16 @@ async function writeText(filePath: string, content: string): Promise<void> {
 
 export class McpRegistrationService {
   constructor(
-    private readonly getAppRoot: () => string,
+    private readonly getPaths: () => McpAppPaths | string,
     private readonly getHome: () => string = homedir
   ) {}
 
   async getLaunchSpec(): Promise<McpLaunchSpec> {
-    const script = await resolveMcpLauncherScript(this.getAppRoot())
+    const script = await resolveMcpLauncherScript(this.getPaths())
     if (!script) {
-      throw new Error('nodeshell-mcp.mjs not found — build the MCP package first')
+      throw new Error(
+        'nodeshell-mcp.mjs not found — reinstall NodeShell or run from a built checkout'
+      )
     }
     return buildLaunchSpec(script)
   }

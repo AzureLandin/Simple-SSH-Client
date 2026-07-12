@@ -3,8 +3,9 @@
     "version": "2.0.0",
     "description": "NodeShell — desktop SSH client",
     "main": "./out/main/index.js",
-    "author": "example.com",
-    "homepage": "https://electron-vite.org",
+    "author": "AzureLandin",
+    "license": "MIT",
+    "homepage": "https://github.com/AzureLandin/Simple-SSH-Client",
     "scripts": {
         "format": "prettier --write .",
         "lint": "eslint --cache .",
@@ -17,19 +18,23 @@
         "postinstall": "electron-builder install-app-deps || node -e \"console.warn('[postinstall] native rebuild skipped (ssh2 works without cpu-features)')\"",
         "build:unpack": "npm run build && electron-builder --dir",
         "build:win": "npm run build && electron-builder --win",
-        "build:mac": "electron-vite build && electron-builder --mac",
+        "build:mac": "npm run build && electron-builder --mac --arm64",
+        "build:mac:x64": "npm run build && electron-builder --mac --x64",
         "build:linux": "electron-vite build && electron-builder --linux",
         "test": "vitest run",
-        "test:watch": "vitest"
+        "test:watch": "vitest",
+        "mcp": "npm run build && node ./scripts/nodeshell-mcp.mjs"
     },
     "dependencies": {
         "@electron-toolkit/preload": "^3.0.2",
         "@electron-toolkit/utils": "^4.0.0",
+        "@modelcontextprotocol/sdk": "^1.29.0",
         "@radix-ui/react-select": "^2.3.3",
         "font-list": "^2.1.0",
         "i18next": "^26.3.6",
         "react-i18next": "^17.0.9",
-        "ssh2": "^1.17.0"
+        "ssh2": "^1.17.0",
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "@electron-toolkit/eslint-config-prettier": "^3.0.0",
