@@ -277,13 +277,13 @@ export function SftpPanel({
     <div className={`sftp-panel${expanded ? ' sftp-panel-expanded' : ''}`}>
       <button type="button" className="sftp-panel-toggle" onClick={onToggle}>
         <span className="sftp-panel-chevron" aria-hidden>
-          {expanded ? '▾' : '▴'}
+          ▾
         </span>
         <span className="sftp-panel-title">{t('sftp.title')}</span>
         {connected && (
           <span className="sftp-status-dot" title={t('sftp.connected')} aria-hidden />
         )}
-        {connected && expanded && (
+        {connected && (
           <span className="sftp-cwd" title={cwd}>
             {cwd}
           </span>
@@ -296,14 +296,19 @@ export function SftpPanel({
         )}
       </button>
 
-      {expanded && (
-        <div
-          className={`sftp-panel-body${dragOver ? ' sftp-panel-body-dragover' : ''}`}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={(e) => void handleDrop(e)}
-        >
+      <div
+        className="sftp-panel-collapse"
+        aria-hidden={!expanded}
+        inert={!expanded ? true : undefined}
+      >
+        <div className="sftp-panel-collapse-inner">
+          <div
+            className={`sftp-panel-body${dragOver ? ' sftp-panel-body-dragover' : ''}`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={(e) => void handleDrop(e)}
+          >
           {dragOver && connected && sessionId && (
             <div className="sftp-drop-overlay" aria-hidden>
               <p>{t('sftp.dropToUpload')}</p>
@@ -475,8 +480,9 @@ export function SftpPanel({
               </div>
             </>
           )}
+          </div>
         </div>
-      )}
+      </div>
 
       {deleteTarget && (
         <ConfirmModal

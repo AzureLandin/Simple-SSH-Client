@@ -1,13 +1,20 @@
-import { dialog, ipcMain, safeStorage } from 'electron'
+import { dialog, ipcMain, safeStorage, app } from 'electron'
 import { readFile, stat } from 'fs/promises'
 import { basename } from 'path'
 import type { ConnectionStore } from './connection-store'
 import type { CredentialStore } from './credential-store'
+import { McpRegistrationService } from './mcp-registration'
 import type { MonitorService } from './monitor-service'
 import type { SessionManager } from './session-manager'
 import type { SettingsStore } from './settings-store'
 import type { SftpService } from './sftp-service'
-import { IPC, type AppSettings, type ConnectOptions, type HostInput } from '../shared/types'
+import {
+  IPC,
+  type AppSettings,
+  type ConnectOptions,
+  type HostInput,
+  type McpRegistrationTarget
+} from '../shared/types'
 
 export function registerIpc(
   store: ConnectionStore,
@@ -17,6 +24,11 @@ export function registerIpc(
   sftp: SftpService,
   monitor: MonitorService
 ): void {
+  const mcpRegistration = new McpRegistrationService(() => {
+    // Prefer cwd in electron-vite dev; fall back to app path.
+    return process.cwd() || app.getAppPath()
+  })
+
   ipcMain.handle(IPC.hostsList, async () => store.list())
   ipcMain.handle(IPC.hostsCreate, async (_e, input: HostInput) => store.create(input))
   ipcMain.handle(IPC.hostsUpdate, async (_e, id: string, patch: Partial<HostInput>) =>
@@ -141,6 +153,13 @@ export function registerIpc(
   ipcMain.handle(IPC.monitorSetActive, async (_e, sessionId: string | null, title?: string) => {
     monitor.setActive(sessionId, title ?? '')
   })
+
+  ipcMain.handle(IPC.mcpRegistrationStatus, async () => mcpRegistration.status())
+  ipcMain.handle(
+    IPC.mcpRegistrationRegister,
+    async (_e, target: McpRegistrationTarget | 'all') => mcpRegistration.register(target)
+  )
+  ipcMain.handle(IPC.mcpRegistrationClipboard, async () => mcpRegistration.clipboardSnippet())
 
   ipcMain.handle(IPC.dialogOpenPrivateKey, async () => {
     const result = await dialog.showOpenDialog({

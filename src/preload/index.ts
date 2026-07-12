@@ -81,6 +81,11 @@ const api: ElectronApi = {
       return () => ipcRenderer.removeListener(IPC.monitorUpdate, listener)
     }
   },
+  mcpRegistration: {
+    status: () => ipcRenderer.invoke(IPC.mcpRegistrationStatus),
+    register: (target) => ipcRenderer.invoke(IPC.mcpRegistrationRegister, target),
+    clipboardSnippet: () => ipcRenderer.invoke(IPC.mcpRegistrationClipboard)
+  },
   dialog: {
     openPrivateKeyFile: () => ipcRenderer.invoke(IPC.dialogOpenPrivateKey)
   }

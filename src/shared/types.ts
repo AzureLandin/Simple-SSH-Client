@@ -2,10 +2,20 @@ export type AuthMethod = 'password' | 'privateKey'
 
 export type LanguageCode = 'zh' | 'en'
 
+export type ThemePreference = 'system' | 'light' | 'dark'
+
+export type ResolvedTheme = 'light' | 'dark'
+
 export interface AppSettings {
   language: LanguageCode
   terminalFontFamily: string
   terminalFontSize: number
+  /** MCP SSH session idle timeout in minutes (default 10). */
+  mcpIdleTimeoutMinutes: number
+  /** Max concurrent MCP SSH sessions (default 8). */
+  mcpMaxSessions: number
+  /** UI + terminal theme preference (default system). */
+  themePreference: ThemePreference
 }
 
 export interface HostConfig {
@@ -32,6 +42,7 @@ export type SshErrorCode =
   | 'CONFIG_READ_FAILED'
   | 'CONFIG_WRITE_FAILED'
   | 'SESSION_NOT_FOUND'
+  | 'MCP_SESSION_LIMIT'
   | 'UNKNOWN'
 
 export interface AppError {
@@ -159,9 +170,33 @@ export interface ElectronApi {
   fonts: {
     list: () => Promise<string[]>
   }
+  mcpRegistration: {
+    status: () => Promise<McpRegistrationTargetStatus[]>
+    register: (
+      target: McpRegistrationTarget | 'all'
+    ) => Promise<McpRegistrationResult[]>
+    clipboardSnippet: () => Promise<string>
+  }
   dialog: {
     openPrivateKeyFile: () => Promise<string | null>
   }
+}
+
+export type McpRegistrationTarget = 'cursor' | 'claudeCode' | 'codex' | 'opencode'
+
+export interface McpRegistrationTargetStatus {
+  id: McpRegistrationTarget
+  label: string
+  configPath: string
+  registered: boolean
+  stale: boolean
+  detail?: string
+}
+
+export interface McpRegistrationResult {
+  id: McpRegistrationTarget
+  ok: boolean
+  message: string
 }
 
 export const IPC = {
@@ -195,6 +230,9 @@ export const IPC = {
   monitorSetActive: 'monitor:setActive',
   monitorUpdate: 'monitor:update',
   fontsList: 'fonts:list',
+  mcpRegistrationStatus: 'mcpRegistration:status',
+  mcpRegistrationRegister: 'mcpRegistration:register',
+  mcpRegistrationClipboard: 'mcpRegistration:clipboardSnippet',
   dialogOpenPrivateKey: 'dialog:openPrivateKey',
   dialogOpenUploadFiles: 'dialog:openUploadFiles',
   dialogSaveDownload: 'dialog:saveDownload'

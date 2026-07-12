@@ -54,12 +54,32 @@
     "confirm": "确定",
     "cancel": "取消"
   },
-  "settings": {
+    "settings": {
     "open": "设置",
     "title": "设置",
+    "appearance": "外观",
+    "theme": "主题",
+    "themeSystem": "跟随系统",
+    "themeLight": "浅色",
+    "themeDark": "深色",
     "terminal": "终端",
     "fontFamily": "字体",
-    "fontSize": "字号"
+    "fontSize": "字号",
+    "mcp": "MCP",
+    "mcpIdleTimeout": "会话空闲超时（分钟）",
+    "mcpMaxSessions": "最大同时会话数",
+    "mcpHint": "控制 Agent 通过 MCP 连接 SSH 时的空闲断开与并发上限。",
+    "mcpRegisterTitle": "注册到 Agent",
+    "mcpRegisterHint": "写入各 Agent 的用户全局 MCP 配置（不覆盖其它服务器）。需本机已安装 Node，且已构建 MCP 启动脚本。",
+    "mcpRegisterAll": "全部注册",
+    "mcpRegister": "注册",
+    "mcpUpdate": "更新",
+    "mcpCopyConfig": "复制配置",
+    "mcpCopyOk": "已复制到剪贴板",
+    "mcpRegisterOk": "注册完成",
+    "mcpStatusRegistered": "已注册",
+    "mcpStatusMissing": "未注册",
+    "mcpStatusStale": "路径需更新"
   },
   "sidebar": {
     "placeholderTitle": "监控",

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { HostConfig, LanguageCode } from '../../shared/types'
+import type { HostConfig, LanguageCode, ThemePreference } from '../../shared/types'
 import { ConfirmModal } from './components/ConfirmModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { HostPickerModal } from './components/HostPickerModal'
+import { ModalShell, useModalClose } from './components/ModalShell'
 import { SessionTabs } from './components/SessionTabs'
 import { SettingsModal } from './components/SettingsModal'
 import { SidebarPanel } from './components/SidebarPanel'
@@ -11,6 +12,12 @@ import { Toast } from './components/Toast'
 import { useHosts } from './hooks/useHosts'
 import { ConnectError, type UiSession, useSessions } from './hooks/useSessions'
 import i18n from './i18n'
+import {
+  applyResolvedTheme,
+  getSystemPrefersDark,
+  resolveTheme,
+  subscribeSystemPrefersDark
+} from './theme'
 
 type PasswordAction =
   | { type: 'connect'; host: HostConfig }
@@ -24,6 +31,56 @@ type ConfirmRequest = {
   resolve: (ok: boolean) => void
 }
 
+function PasswordModalBody({
+  host,
+  busy,
+  onSubmit
+}: {
+  host: HostConfig
+  busy: boolean
+  onSubmit: (password: string) => void
+}): React.JSX.Element {
+  const { t } = useTranslation()
+  const requestClose = useModalClose()
+  const [password, setPassword] = useState('')
+
+  const handleSubmit = (e: React.FormEvent): void => {
+    e.preventDefault()
+    if (busy) return
+    onSubmit(password)
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h3 id="password-modal-title" className="modal-title">
+        {t('auth.passwordTitle', { name: host.name })}
+      </h3>
+      <p className="modal-subtitle">
+        {host.username}@{host.host}:{host.port}
+      </p>
+      <label className="form-field">
+        <span>{t('auth.passwordLabel')}</span>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoFocus
+          required
+          disabled={busy}
+        />
+      </label>
+      <div className="form-actions">
+        <button type="button" className="btn-secondary" onClick={requestClose} disabled={busy}>
+          {t('form.cancel')}
+        </button>
+        <button type="submit" className="btn-primary" disabled={busy}>
+          {t('auth.connect')}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 function PasswordModal({
   host,
   busy,
@@ -35,45 +92,16 @@ function PasswordModal({
   onSubmit: (password: string) => void
   onCancel: () => void
 }): React.JSX.Element {
-  const { t } = useTranslation()
-  const [password, setPassword] = useState('')
-
-  const handleSubmit = (e: React.FormEvent): void => {
-    e.preventDefault()
-    if (busy) return
-    onSubmit(password)
-  }
-
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
-      <form className="modal password-modal" onSubmit={handleSubmit}>
-        <h3 id="password-modal-title" className="modal-title">
-          {t('auth.passwordTitle', { name: host.name })}
-        </h3>
-        <p className="modal-subtitle">
-          {host.username}@{host.host}:{host.port}
-        </p>
-        <label className="form-field">
-          <span>{t('auth.passwordLabel')}</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoFocus
-            required
-            disabled={busy}
-          />
-        </label>
-        <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={onCancel} disabled={busy}>
-            {t('form.cancel')}
-          </button>
-          <button type="submit" className="btn-primary" disabled={busy}>
-            {t('auth.connect')}
-          </button>
-        </div>
-      </form>
-    </div>
+    <ModalShell
+      onClose={onCancel}
+      dialogClassName="password-modal"
+      labelledBy="password-modal-title"
+      closeOnEscape={!busy}
+      closeOnOverlayClick={false}
+    >
+      <PasswordModalBody host={host} busy={busy} onSubmit={onSubmit} />
+    </ModalShell>
   )
 }
 
@@ -95,8 +123,14 @@ function App(): React.JSX.Element {
   const [passwordAction, setPasswordAction] = useState<PasswordAction | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [language, setLanguage] = useState<LanguageCode>('zh')
+  const [themePreference, setThemePreference] = useState<ThemePreference>('system')
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() =>
+    typeof window !== 'undefined' ? getSystemPrefersDark() : true
+  )
   const [terminalFontFamily, setTerminalFontFamily] = useState('Hack')
   const [terminalFontSize, setTerminalFontSize] = useState(14)
+  const [mcpIdleTimeoutMinutes, setMcpIdleTimeoutMinutes] = useState(10)
+  const [mcpMaxSessions, setMcpMaxSessions] = useState(8)
   const [sftpExpanded, setSftpExpanded] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [hostsOpen, setHostsOpen] = useState(false)
@@ -104,18 +138,35 @@ function App(): React.JSX.Element {
   const connectingRef = useRef(false)
   const savePromptedRef = useRef(new Set<string>())
 
+  const resolvedTheme = resolveTheme(themePreference, systemPrefersDark)
+
+  useEffect(() => {
+    applyResolvedTheme(resolvedTheme)
+  }, [resolvedTheme])
+
+  useEffect(() => {
+    if (themePreference !== 'system') return
+    return subscribeSystemPrefersDark(setSystemPrefersDark)
+  }, [themePreference])
+
   useEffect(() => {
     void (async () => {
       try {
         const settings = await window.api.settings.get()
         setLanguage(settings.language)
+        setThemePreference(settings.themePreference)
         setTerminalFontFamily(settings.terminalFontFamily)
         setTerminalFontSize(settings.terminalFontSize)
+        setMcpIdleTimeoutMinutes(settings.mcpIdleTimeoutMinutes)
+        setMcpMaxSessions(settings.mcpMaxSessions)
         await i18n.changeLanguage(settings.language)
       } catch {
         setLanguage('zh')
+        setThemePreference('system')
         setTerminalFontFamily('Hack')
         setTerminalFontSize(14)
+        setMcpIdleTimeoutMinutes(10)
+        setMcpMaxSessions(8)
         await i18n.changeLanguage('zh')
       }
     })()
@@ -135,6 +186,18 @@ function App(): React.JSX.Element {
     } catch {
       setLanguage(previous)
       await i18n.changeLanguage(previous)
+      setToast(t('auth.connectionFailed'))
+    }
+  }
+
+  const handleThemePreferenceChange = async (next: ThemePreference): Promise<void> => {
+    const previous = themePreference
+    setThemePreference(next)
+    try {
+      const saved = await window.api.settings.set({ themePreference: next })
+      setThemePreference(saved.themePreference)
+    } catch {
+      setThemePreference(previous)
       setToast(t('auth.connectionFailed'))
     }
   }
@@ -159,6 +222,30 @@ function App(): React.JSX.Element {
       setTerminalFontSize(saved.terminalFontSize)
     } catch {
       setTerminalFontSize(previous)
+      setToast(t('auth.connectionFailed'))
+    }
+  }
+
+  const handleMcpIdleTimeoutMinutesChange = async (next: number): Promise<void> => {
+    const previous = mcpIdleTimeoutMinutes
+    setMcpIdleTimeoutMinutes(next)
+    try {
+      const saved = await window.api.settings.set({ mcpIdleTimeoutMinutes: next })
+      setMcpIdleTimeoutMinutes(saved.mcpIdleTimeoutMinutes)
+    } catch {
+      setMcpIdleTimeoutMinutes(previous)
+      setToast(t('auth.connectionFailed'))
+    }
+  }
+
+  const handleMcpMaxSessionsChange = async (next: number): Promise<void> => {
+    const previous = mcpMaxSessions
+    setMcpMaxSessions(next)
+    try {
+      const saved = await window.api.settings.set({ mcpMaxSessions: next })
+      setMcpMaxSessions(saved.mcpMaxSessions)
+    } catch {
+      setMcpMaxSessions(previous)
       setToast(t('auth.connectionFailed'))
     }
   }
@@ -349,6 +436,7 @@ function App(): React.JSX.Element {
             onOpenHosts={() => setHostsOpen(true)}
             terminalFontFamily={terminalFontFamily}
             terminalFontSize={terminalFontSize}
+            resolvedTheme={resolvedTheme}
             onTerminalFontSizeChange={(size) => void handleTerminalFontSizeChange(size)}
           />
         </ErrorBoundary>
@@ -367,11 +455,17 @@ function App(): React.JSX.Element {
       {settingsOpen && (
         <SettingsModal
           language={language}
+          themePreference={themePreference}
           terminalFontFamily={terminalFontFamily}
           terminalFontSize={terminalFontSize}
+          mcpIdleTimeoutMinutes={mcpIdleTimeoutMinutes}
+          mcpMaxSessions={mcpMaxSessions}
           onLanguageChange={(lang) => void handleLanguageChange(lang)}
+          onThemePreferenceChange={(theme) => void handleThemePreferenceChange(theme)}
           onTerminalFontFamilyChange={(family) => void handleTerminalFontFamilyChange(family)}
           onTerminalFontSizeChange={(size) => void handleTerminalFontSizeChange(size)}
+          onMcpIdleTimeoutMinutesChange={(minutes) => void handleMcpIdleTimeoutMinutesChange(minutes)}
+          onMcpMaxSessionsChange={(max) => void handleMcpMaxSessionsChange(max)}
           onClose={() => setSettingsOpen(false)}
         />
       )}

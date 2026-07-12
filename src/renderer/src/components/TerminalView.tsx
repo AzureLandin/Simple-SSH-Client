@@ -2,10 +2,11 @@ import { useEffect, useRef } from 'react'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
+import type { ResolvedTheme } from '../../../shared/types'
 import {
-  ONE_DARK_THEME,
   buildTerminalFontStack,
-  clampTerminalFontSize
+  clampTerminalFontSize,
+  getTerminalTheme
 } from '../terminal-theme'
 
 interface TerminalViewProps {
@@ -14,6 +15,7 @@ interface TerminalViewProps {
   visible: boolean
   fontFamily: string
   fontSize: number
+  resolvedTheme: ResolvedTheme
   onFontSizeChange?: (size: number) => void
 }
 
@@ -23,6 +25,7 @@ export function TerminalView({
   visible,
   fontFamily,
   fontSize,
+  resolvedTheme,
   onFontSizeChange
 }: TerminalViewProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -30,9 +33,11 @@ export function TerminalView({
   const fitRef = useRef<FitAddon | null>(null)
   const fontSizeRef = useRef(fontSize)
   const onFontSizeChangeRef = useRef(onFontSizeChange)
+  const resolvedThemeRef = useRef(resolvedTheme)
 
   fontSizeRef.current = fontSize
   onFontSizeChangeRef.current = onFontSizeChange
+  resolvedThemeRef.current = resolvedTheme
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -41,7 +46,7 @@ export function TerminalView({
       cursorBlink: true,
       fontFamily: buildTerminalFontStack(fontFamily),
       fontSize,
-      theme: ONE_DARK_THEME,
+      theme: getTerminalTheme(resolvedThemeRef.current),
       allowTransparency: false
     })
     const fit = new FitAddon()
@@ -60,18 +65,29 @@ export function TerminalView({
       void window.api.sessions.write(sessionId, data)
     })
 
-    const ro = new ResizeObserver(() => {
-      try {
-        fit.fit()
-        void window.api.sessions.resize(sessionId, term.cols, term.rows)
-      } catch {
-        /* ignore fit errors */
+    let fitTimer: number | null = null
+    const scheduleFit = (immediate = false): void => {
+      if (fitTimer != null) window.clearTimeout(fitTimer)
+      const run = (): void => {
+        fitTimer = null
+        try {
+          fit.fit()
+          void window.api.sessions.resize(sessionId, term.cols, term.rows)
+        } catch {
+          /* ignore fit errors */
+        }
       }
+      if (immediate) run()
+      else fitTimer = window.setTimeout(run, 80)
+    }
+
+    const ro = new ResizeObserver(() => {
+      scheduleFit(false)
     })
     ro.observe(containerRef.current)
 
     try {
-      void window.api.sessions.resize(sessionId, term.cols, term.rows)
+      scheduleFit(true)
     } catch {
       /* ignore */
     }
@@ -80,6 +96,7 @@ export function TerminalView({
       unsub()
       onData.dispose()
       ro.disconnect()
+      if (fitTimer != null) window.clearTimeout(fitTimer)
       term.dispose()
       termRef.current = null
       fitRef.current = null
@@ -101,6 +118,12 @@ export function TerminalView({
       /* ignore */
     }
   }, [fontFamily, fontSize, sessionId])
+
+  useEffect(() => {
+    const term = termRef.current
+    if (!term) return
+    term.options.theme = getTerminalTheme(resolvedTheme)
+  }, [resolvedTheme])
 
   useEffect(() => {
     if (!visible) return

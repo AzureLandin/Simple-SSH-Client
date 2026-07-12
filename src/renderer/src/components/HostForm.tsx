@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthMethod, HostInput } from '../../../shared/types'
+import { Select } from './Select'
 
 interface HostFormProps {
   initial?: Partial<HostInput> & { id?: string }
@@ -95,16 +96,17 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
         />
       </label>
 
-      <label className="form-field">
+      <div className="form-field">
         <span>{t('form.auth')}</span>
-        <select
+        <Select
           value={authMethod}
-          onChange={(e) => setAuthMethod(e.target.value as AuthMethod)}
-        >
-          <option value="password">{t('form.password')}</option>
-          <option value="privateKey">{t('form.privateKey')}</option>
-        </select>
-      </label>
+          onChange={(v) => setAuthMethod(v as AuthMethod)}
+          options={[
+            { value: 'password', label: t('form.password') },
+            { value: 'privateKey', label: t('form.privateKey') }
+          ]}
+        />
+      </div>
 
       {authMethod === 'privateKey' && (
         <label className="form-field">
