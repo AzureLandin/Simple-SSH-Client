@@ -39,6 +39,9 @@
     "hostKeyChangedTitle": "主机密钥变更",
     "hostKeyChanged": "{{message}}\n\n主机密钥已变更。是否接受新密钥并连接？",
     "hostKeyChangedReconnect": "{{message}}\n\n主机密钥已变更。是否接受新密钥并重新连接？",
+    "hostKeyUnknownTitle": "未知主机密钥",
+    "hostKeyUnknown": "{{message}}\n\n这是首次连接该主机。是否信任并保存此密钥？",
+    "hostKeyUnknownReconnect": "{{message}}\n\n这是首次连接该主机。是否信任并保存此密钥后重新连接？",
     "hostNotFound": "未找到主机配置",
     "connectionFailed": "连接失败",
     "reconnectFailed": "重连失败",
@@ -46,7 +49,10 @@
     "saveCredentials": "是否保存主机「{{name}}」的登录凭据？密码或私钥将使用系统加密安全存储。",
     "saveCredentialsConfirm": "保存",
     "saveCredentialsSkip": "暂不",
-    "credentialsUnavailable": "当前系统无法安全保存凭据"
+    "credentialsUnavailable": "当前系统无法安全保存凭据",
+    "authFailed": "认证失败：用户名或密码不正确",
+    "hostUnreachable": "无法连接主机（网络不可达或端口未开放）",
+    "timeout": "连接超时"
   },
   "common": {
     "dismiss": "关闭",
@@ -54,12 +60,42 @@
     "confirm": "确定",
     "cancel": "取消"
   },
-  "settings": {
+    "settings": {
     "open": "设置",
     "title": "设置",
+    "appearance": "外观",
+    "theme": "主题",
+    "themeSystem": "跟随系统",
+    "themeLight": "浅色",
+    "themeDark": "深色",
     "terminal": "终端",
     "fontFamily": "字体",
-    "fontSize": "字号"
+    "fontSize": "字号",
+    "mcp": "MCP",
+    "mcpIdleTimeout": "会话空闲超时（分钟）",
+    "mcpMaxSessions": "最大同时会话数",
+    "mcpHint": "控制 Agent 通过 MCP 连接 SSH 时的空闲断开与并发上限。",
+    "mcpRegisterTitle": "注册到 Agent",
+    "mcpRegisterHint": "写入各 Agent 的用户全局 MCP 配置（不覆盖其它服务器）。需本机 PATH 上有 Node；安装包已内置 MCP 启动器，无需再编译。",
+    "mcpRegisterAll": "全部注册",
+    "mcpRegister": "注册",
+    "mcpUpdate": "更新",
+    "mcpCopyConfig": "复制配置",
+    "mcpCopyOk": "已复制到剪贴板",
+    "mcpRegisterOk": "注册完成",
+    "mcpStatusRegistered": "已注册",
+    "mcpStatusMissing": "未注册",
+    "mcpStatusStale": "路径需更新"
+  },
+  "about": {
+    "open": "关于",
+    "title": "关于 NodeShell",
+    "version": "版本 {{version}}",
+    "tagline": "桌面 SSH 客户端：终端、SFTP、监控与 MCP。",
+    "author": "作者",
+    "license": "开源协议",
+    "licenseNote": "本项目采用 MIT 协议开源，可自由使用、修改与分发。",
+    "back": "返回设置"
   },
   "sidebar": {
     "placeholderTitle": "监控",

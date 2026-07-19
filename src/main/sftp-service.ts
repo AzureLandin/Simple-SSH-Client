@@ -42,15 +42,20 @@ function entryFromListing(
 }
 
 export function joinRemote(cwd: string, name: string): string {
-  if (name.startsWith('/')) return name.replace(/\/+/g, '/')
-  const base = cwd.endsWith('/') ? cwd.slice(0, -1) : cwd
-  if (name === '..') {
-    if (base === '' || base === '/') return '/'
-    const idx = base.lastIndexOf('/')
-    return idx <= 0 ? '/' : base.slice(0, idx) || '/'
+  const raw = name.startsWith('/')
+    ? name
+    : `${cwd.endsWith('/') ? cwd.slice(0, -1) : cwd || ''}/${name}`
+  const parts = raw.replace(/\\/g, '/').split('/')
+  const stack: string[] = []
+  for (const part of parts) {
+    if (part === '' || part === '.') continue
+    if (part === '..') {
+      if (stack.length > 0) stack.pop()
+      continue
+    }
+    stack.push(part)
   }
-  if (name === '.' || name === '') return base || '/'
-  return `${base === '/' ? '' : base}/${name}`.replace(/\/+/g, '/') || '/'
+  return `/${stack.join('/')}`
 }
 
 export class SftpService {
@@ -190,7 +195,7 @@ export class SftpService {
   async mkdir(sessionId: string, name: string): Promise<void> {
     const sftp = await this.ensure(sessionId)
     const cwd = this.cwds.get(sessionId) ?? '/'
-    const path = joinRemote(cwd, name)
+    const path = await this.resolveMutablePath(sftp, cwd, name)
     await new Promise<void>((resolve, reject) => {
       sftp.mkdir(path, (err) => {
         if (err) reject({ code: 'UNKNOWN', message: err.message })
@@ -202,8 +207,8 @@ export class SftpService {
   async rename(sessionId: string, fromName: string, toName: string): Promise<void> {
     const sftp = await this.ensure(sessionId)
     const cwd = this.cwds.get(sessionId) ?? '/'
-    const from = joinRemote(cwd, fromName)
-    const to = joinRemote(cwd, toName)
+    const from = await this.resolveExistingPath(sftp, cwd, fromName)
+    const to = await this.resolveMutablePath(sftp, cwd, toName)
     await new Promise<void>((resolve, reject) => {
       sftp.rename(from, to, (err) => {
         if (err) reject({ code: 'UNKNOWN', message: err.message })
@@ -215,7 +220,7 @@ export class SftpService {
   async remove(sessionId: string, remotePath: string): Promise<void> {
     const sftp = await this.ensure(sessionId)
     const cwd = this.cwds.get(sessionId) ?? '/'
-    const path = joinRemote(cwd, remotePath)
+    const path = await this.resolveExistingPath(sftp, cwd, remotePath)
     await this.removePath(sftp, path)
   }
 
@@ -223,7 +228,7 @@ export class SftpService {
     const sftp = await this.ensure(sessionId)
     const cwd = this.cwds.get(sessionId) ?? '/'
     const name = remoteName || basename(localPath)
-    const remotePath = joinRemote(cwd, name)
+    const remotePath = await this.resolveMutablePath(sftp, cwd, name)
     let total = 0
     try {
       total = statSync(localPath).size
@@ -254,7 +259,7 @@ export class SftpService {
   async download(sessionId: string, remotePath: string, localPath: string): Promise<void> {
     const sftp = await this.ensure(sessionId)
     const cwd = this.cwds.get(sessionId) ?? '/'
-    const remote = joinRemote(cwd, remotePath)
+    const remote = await this.resolveExistingPath(sftp, cwd, remotePath)
     await mkdir(dirname(localPath), { recursive: true })
     const attrs = await this.stat(sftp, remote)
     const name = basename(remote)
@@ -357,6 +362,38 @@ export class SftpService {
         else resolve(abs)
       })
     })
+  }
+
+  /** Resolve an existing remote path (follows symlinks via realpath). */
+  private async resolveExistingPath(
+    sftp: SFTPWrapper,
+    cwd: string,
+    name: string
+  ): Promise<string> {
+    return this.realpath(sftp, joinRemote(cwd, name))
+  }
+
+  /**
+   * Resolve a path that may not exist yet (mkdir / rename target / upload).
+   * Canonicalizes ".." segments then realpaths the parent directory.
+   */
+  private async resolveMutablePath(
+    sftp: SFTPWrapper,
+    cwd: string,
+    name: string
+  ): Promise<string> {
+    const joined = joinRemote(cwd, name)
+    try {
+      return await this.realpath(sftp, joined)
+    } catch {
+      const parent = joinRemote(joined, '..')
+      const absParent = await this.realpath(sftp, parent === '' ? '/' : parent)
+      const base = basename(joined)
+      if (!base || base === '/' || base === '.') {
+        return absParent
+      }
+      return joinRemote(absParent, base)
+    }
   }
 
   private stat(

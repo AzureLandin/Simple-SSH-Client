@@ -62,6 +62,7 @@ export function SftpPanel({
   const [deleteTarget, setDeleteTarget] = useState<SftpEntry | null>(null)
   /** Session id whose listing is currently cached in UI state. */
   const loadedForSessionRef = useRef<string | null>(null)
+  const requestGenRef = useRef(0)
   const transferClearRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dragDepthRef = useRef(0)
 
@@ -73,20 +74,24 @@ export function SftpPanel({
       loadedForSessionRef.current = null
       return
     }
+    const gen = ++requestGenRef.current
+    const forSession = sessionId
     setLoading(true)
     setError(null)
     try {
       const [path, list] = await Promise.all([
-        window.api.sftp.cwd(sessionId),
-        window.api.sftp.list(sessionId)
+        window.api.sftp.cwd(forSession),
+        window.api.sftp.list(forSession)
       ])
+      if (gen !== requestGenRef.current) return
       setCwd(path)
       setEntries(list)
-      loadedForSessionRef.current = sessionId
+      loadedForSessionRef.current = forSession
     } catch (e) {
+      if (gen !== requestGenRef.current) return
       setError(e instanceof Error ? e.message : t('sftp.error'))
     } finally {
-      setLoading(false)
+      if (gen === requestGenRef.current) setLoading(false)
     }
   }, [sessionId, connected, t])
 
@@ -140,18 +145,23 @@ export function SftpPanel({
 
   const openDir = async (name: string): Promise<void> => {
     if (!sessionId) return
+    const gen = ++requestGenRef.current
+    const forSession = sessionId
     setLoading(true)
     setError(null)
     setSelectedPath(null)
     try {
-      const path = await window.api.sftp.chdir(sessionId, name)
+      const path = await window.api.sftp.chdir(forSession, name)
+      const list = await window.api.sftp.list(forSession)
+      if (gen !== requestGenRef.current) return
       setCwd(path)
-      setEntries(await window.api.sftp.list(sessionId))
-      loadedForSessionRef.current = sessionId
+      setEntries(list)
+      loadedForSessionRef.current = forSession
     } catch (e) {
+      if (gen !== requestGenRef.current) return
       setError(e instanceof Error ? e.message : t('sftp.error'))
     } finally {
-      setLoading(false)
+      if (gen === requestGenRef.current) setLoading(false)
     }
   }
 
@@ -277,13 +287,13 @@ export function SftpPanel({
     <div className={`sftp-panel${expanded ? ' sftp-panel-expanded' : ''}`}>
       <button type="button" className="sftp-panel-toggle" onClick={onToggle}>
         <span className="sftp-panel-chevron" aria-hidden>
-          {expanded ? '▾' : '▴'}
+          ▾
         </span>
         <span className="sftp-panel-title">{t('sftp.title')}</span>
         {connected && (
           <span className="sftp-status-dot" title={t('sftp.connected')} aria-hidden />
         )}
-        {connected && expanded && (
+        {connected && (
           <span className="sftp-cwd" title={cwd}>
             {cwd}
           </span>
@@ -296,14 +306,19 @@ export function SftpPanel({
         )}
       </button>
 
-      {expanded && (
-        <div
-          className={`sftp-panel-body${dragOver ? ' sftp-panel-body-dragover' : ''}`}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={(e) => void handleDrop(e)}
-        >
+      <div
+        className="sftp-panel-collapse"
+        aria-hidden={!expanded}
+        inert={!expanded ? true : undefined}
+      >
+        <div className="sftp-panel-collapse-inner">
+          <div
+            className={`sftp-panel-body${dragOver ? ' sftp-panel-body-dragover' : ''}`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={(e) => void handleDrop(e)}
+          >
           {dragOver && connected && sessionId && (
             <div className="sftp-drop-overlay" aria-hidden>
               <p>{t('sftp.dropToUpload')}</p>
@@ -475,8 +490,9 @@ export function SftpPanel({
               </div>
             </>
           )}
+          </div>
         </div>
-      )}
+      </div>
 
       {deleteTarget && (
         <ConfirmModal

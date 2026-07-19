@@ -10,6 +10,7 @@ interface ConfirmModalProps {
   onCancel: () => void
 }
 
+/** Instant confirm — no enter/exit motion (high-frequency actions). */
 export function ConfirmModal({
   title,
   message,

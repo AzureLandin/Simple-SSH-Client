@@ -44,6 +44,9 @@ const api: ElectronApi = {
   fonts: {
     list: () => ipcRenderer.invoke(IPC.fontsList)
   },
+  app: {
+    getVersion: () => ipcRenderer.invoke(IPC.appGetVersion)
+  },
   credentials: {
     isAvailable: () => ipcRenderer.invoke(IPC.credentialsIsAvailable),
     save: (hostId, payload) => ipcRenderer.invoke(IPC.credentialsSave, hostId, payload),
@@ -80,6 +83,11 @@ const api: ElectronApi = {
       ipcRenderer.on(IPC.monitorUpdate, listener)
       return () => ipcRenderer.removeListener(IPC.monitorUpdate, listener)
     }
+  },
+  mcpRegistration: {
+    status: () => ipcRenderer.invoke(IPC.mcpRegistrationStatus),
+    register: (target) => ipcRenderer.invoke(IPC.mcpRegistrationRegister, target),
+    clipboardSnippet: () => ipcRenderer.invoke(IPC.mcpRegistrationClipboard)
   },
   dialog: {
     openPrivateKeyFile: () => ipcRenderer.invoke(IPC.dialogOpenPrivateKey)

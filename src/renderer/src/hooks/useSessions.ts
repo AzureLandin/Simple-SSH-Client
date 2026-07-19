@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { parseIpcThrownError } from '../../../shared/ipc-error'
 import type { ConnectOptions, HostConfig } from '../../../shared/types'
 
 export type UiSessionStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
@@ -22,31 +23,6 @@ export class ConnectError extends Error {
   }
 }
 
-function normalizeInvokeError(e: unknown): { code?: string; message: string } {
-  if (e && typeof e === 'object') {
-    const obj = e as Record<string, unknown>
-    let message =
-      typeof obj.message === 'string' ? obj.message : typeof e === 'string' ? e : 'Connection failed'
-    let code = typeof obj.code === 'string' ? obj.code : undefined
-
-    if (!code && message) {
-      try {
-        const parsed = JSON.parse(message) as { code?: string; message?: string }
-        if (typeof parsed.code === 'string') {
-          code = parsed.code
-          if (typeof parsed.message === 'string') message = parsed.message
-        }
-      } catch {
-        /* not JSON */
-      }
-    }
-
-    return { code, message }
-  }
-
-  return { message: String(e) }
-}
-
 async function invokeConnect(
   hostId: string,
   options?: ConnectOptions
@@ -54,7 +30,7 @@ async function invokeConnect(
   try {
     return await window.api.sessions.connect(hostId, options)
   } catch (e) {
-    const { code, message } = normalizeInvokeError(e)
+    const { code, message } = parseIpcThrownError(e)
     if (code) throw new ConnectError(code, message)
     throw new Error(message)
   }
@@ -132,17 +108,13 @@ export function useSessions() {
 
   const reconnect = useCallback(
     async (session: UiSession, host: HostConfig, options?: ConnectOptions): Promise<void> => {
-      try {
-        await window.api.sessions.disconnect(session.sessionId)
-      } catch {
-        /* ignore */
-      }
-
+      // Connect first, then swap — keeps the old session alive if the new connect fails.
       try {
         const { sessionId } = await invokeConnect(host.id, options)
+        const oldId = session.sessionId
         setSessions((prev) =>
           prev.map((s) =>
-            s.sessionId === session.sessionId
+            s.sessionId === oldId
               ? {
                   sessionId,
                   hostId: host.id,
@@ -154,11 +126,17 @@ export function useSessions() {
           )
         )
         setActiveSessionId(sessionId)
+        try {
+          await window.api.sessions.disconnect(oldId)
+        } catch {
+          /* old session may already be gone */
+        }
+        dataListenersRef.current.delete(oldId)
       } catch (e) {
         const { code, message } =
           e instanceof ConnectError
             ? { code: e.code, message: e.message }
-            : normalizeInvokeError(e)
+            : parseIpcThrownError(e)
         if (code) throw new ConnectError(code, message)
         setToast(message)
         setSessions((prev) =>

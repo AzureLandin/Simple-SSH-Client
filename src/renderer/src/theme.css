@@ -1,0 +1,179 @@
+/* Semantic theme tokens — components should use var(--…) only. */
+
+[data-theme='dark'] {
+  --bg-app: #121212;
+  --bg-panel: #1a1a1a;
+  --bg-elevated: #2a2a2a;
+  --bg-card: #222222;
+  --bg-terminal: #1e1e1e;
+  --bg-input: #1a1a1a;
+  --bg-input-focus: #1f1f1f;
+  --bg-hover: #2a2a2a;
+  --bg-hover-strong: #3a3a3a;
+  --bg-overlay: rgba(0, 0, 0, 0.55);
+  --bg-danger: #4a2d2d;
+  --bg-warn-banner: #2a2220;
+
+  --border-default: #333333;
+  --border-strong: #444444;
+  --border-subtle: #3a3a3a;
+  --border-danger: #6a3d3d;
+  --border-warn: #443333;
+
+  --text-primary: #e0e0e0;
+  --text-heading: #f2f2f2;
+  --text-title: #f0f0f0;
+  --text-body: #dddddd;
+  --text-tertiary: #cccccc;
+  --text-secondary: #aaaaaa;
+  --text-muted: #888888;
+  --text-subtle: #999999;
+  --text-bright: #ffffff;
+  --text-warm: #e8c4a0;
+  --text-error: #e08080;
+  --text-on-accent: #ffffff;
+
+  --scrollbar-track: #1a1a1a;
+  --scrollbar-thumb: #555555;
+  --scrollbar-thumb-hover: #6e6e6e;
+
+  --accent-primary: #3d5a80;
+  --accent-primary-dark: #2d4a6f;
+  --accent-info: #4a8fd0;
+  --accent-focus-ring: rgba(255, 255, 255, 0.06);
+
+  --btn-primary-bg: #2d4a6f;
+  --btn-primary-bg-hover: #3d5a80;
+  --btn-primary-border: #3d5a80;
+  --btn-secondary-bg: #2a2a2a;
+  --btn-secondary-bg-hover: #333333;
+  --btn-secondary-border: #444444;
+  --btn-secondary-text: #e0e0e0;
+  --btn-danger-bg: #4a2d2d;
+  --btn-danger-bg-hover: #6a3d3d;
+  --btn-danger-border: #6a3d3d;
+  --btn-danger-text: #e0e0e0;
+
+  --status-connecting: #e6b800;
+  --status-success: #3d9a50;
+  --status-idle: #888888;
+  --status-error: #cc4444;
+  --status-upload: #e07050;
+
+  --icon-folder-start: #d4a84b;
+  --icon-folder-end: #b8862e;
+
+  --host-avatar-start: #3a4a5e;
+  --host-avatar-end: #2a3544;
+  --host-avatar-border: #4a5a6e;
+  --host-badge-bg: #2a3140;
+  --host-badge-border: #3d4658;
+  --host-badge-text: #d0d8e4;
+  --host-port: #9aa0a6;
+
+  --metric-cpu: #7dcea0;
+  --metric-mem: #e6b07a;
+  --metric-swap: #7aa3c8;
+  --metric-cpu-header: #a05048;
+
+  --monitor-bar-text: #e8eaed;
+  --monitor-bar-text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+  --monitor-text: #d8dce3;
+  --monitor-text-muted: #a8b0bc;
+  --monitor-proc-cpu: #d8dce3;
+  --sftp-name: #d8dce3;
+  --sftp-name-dir: #e8eaed;
+  --border-on-accent: rgba(255, 255, 255, 0.12);
+
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='light'] {
+  --bg-app: #eef1f5;
+  --bg-panel: #ffffff;
+  --bg-elevated: #f3f5f8;
+  --bg-card: #ffffff;
+  --bg-terminal: #f7f8fa;
+  --bg-input: #ffffff;
+  --bg-input-focus: #ffffff;
+  --bg-hover: #e9edf3;
+  --bg-hover-strong: #dde3eb;
+  --bg-overlay: rgba(15, 20, 28, 0.42);
+  --bg-danger: #fef1f1;
+  --bg-warn-banner: #fff7eb;
+
+  --border-default: #d0d6e0;
+  --border-strong: #b4bcc8;
+  --border-subtle: #e6e9ef;
+  --border-danger: #ecc4c4;
+  --border-warn: #ead4b0;
+
+  --text-primary: #14181f;
+  --text-heading: #0c1016;
+  --text-title: #10151c;
+  --text-body: #1e2430;
+  --text-tertiary: #3a4454;
+  --text-secondary: #556070;
+  --text-muted: #6d7888;
+  --text-subtle: #8b95a5;
+  --text-bright: #0c1016;
+  --text-warm: #8a4b16;
+  --text-error: #b42318;
+  --text-on-accent: #ffffff;
+
+  --scrollbar-track: #e8ecf1;
+  --scrollbar-thumb: #b8c0cc;
+  --scrollbar-thumb-hover: #8f99a8;
+
+  --accent-primary: #3a6ea8;
+  --accent-primary-dark: #2b5686;
+  --accent-info: #2b6cb0;
+  --accent-focus-ring: rgba(43, 86, 134, 0.22);
+
+  --btn-primary-bg: #2b5686;
+  --btn-primary-bg-hover: #3a6ea8;
+  --btn-primary-border: #2b5686;
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-bg-hover: #eef2f7;
+  --btn-secondary-border: #c2cad6;
+  --btn-secondary-text: #1a2030;
+  --btn-danger-bg: #fef1f1;
+  --btn-danger-bg-hover: #fadede;
+  --btn-danger-border: #e8b0b0;
+  --btn-danger-text: #b42318;
+
+  --status-connecting: #b8860b;
+  --status-success: #1f7a3a;
+  --status-idle: #6d7888;
+  --status-error: #b42318;
+  --status-upload: #c24e2a;
+
+  --icon-folder-start: #c9963a;
+  --icon-folder-end: #a67a28;
+
+  --host-avatar-start: #5a7290;
+  --host-avatar-end: #3e536c;
+  --host-avatar-border: #6a829c;
+  --host-badge-bg: #eef3f9;
+  --host-badge-border: #c9d4e2;
+  --host-badge-text: #334155;
+  --host-port: #64748b;
+
+  --metric-cpu: #2f9a5c;
+  --metric-mem: #c97a2e;
+  --metric-swap: #3d74a8;
+  --metric-cpu-header: #9a4440;
+
+  --monitor-bar-text: #3a4454;
+  --monitor-bar-text-shadow: 0 0 transparent;
+  --monitor-text: #5c6678;
+  --monitor-text-muted: #7a8496;
+  --monitor-proc-cpu: #5c6678;
+  --sftp-name: #4a5568;
+  --sftp-name-dir: #3d485c;
+  --border-on-accent: rgba(255, 255, 255, 0.22);
+
+  --shadow-modal: 0 16px 40px rgba(15, 20, 28, 0.16);
+}

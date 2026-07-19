@@ -1,36 +1,64 @@
-appId: com.sshclient.app
-productName: SSH Client
+appId: com.nodeshell.app
+productName: NodeShell
 directories:
   buildResources: build
+  output: release
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # Whitelist only — packing .worktrees / junk previously mangled app.asar on Windows
+  # (package.json became binary garbage → "Unable to parse ... Unexpected token").
+  - '!**/*'
+  - package.json
+  - out
+  - out/**/*
+  - resources
+  - resources/**/*
+  - node_modules
+  - node_modules/**/*
 asarUnpack:
   - 'resources/**'
+extraResources:
+  - from: scripts/nodeshell-mcp.mjs
+    to: mcp/nodeshell-mcp.mjs
 win:
-  executableName: ssh-client
+  executableName: NodeShell
+  icon: build/icon.ico
   target:
     - nsis
-    - portable
+  # Skip Authenticode signing only; still embed icon/version into the exe.
+  signExecutable: false
+  signAndEditExecutable: true
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  createStartMenuShortcut: true
+  include: build/installer.nsh
+  # Keep false: we prompt in installer.nsh instead (assisted uninstall).
+  deleteAppDataOnUninstall: false
 mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  # Unsigned local/CI builds; users may need right-click → Open the first time.
+  identity: null
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}-arm64.${ext}
+  title: NodeShell ${version}
 linux:
   target:
     - AppImage
@@ -39,7 +67,7 @@ linux:
   maintainer: electronjs.org
   category: Utility
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}.${ext}
 npmRebuild: false
 publish:
   provider: generic

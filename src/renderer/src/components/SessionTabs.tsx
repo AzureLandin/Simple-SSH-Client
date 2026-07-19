@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import type { ResolvedTheme } from '../../../shared/types'
 import type { UiSession } from '../hooks/useSessions'
 import { SftpPanel } from './SftpPanel'
 import { TerminalView } from './TerminalView'
@@ -15,6 +16,7 @@ interface SessionTabsProps {
   onOpenHosts: () => void
   terminalFontFamily: string
   terminalFontSize: number
+  resolvedTheme: ResolvedTheme
   onTerminalFontSizeChange: (size: number) => void
 }
 
@@ -34,6 +36,7 @@ export function SessionTabs({
   onOpenHosts,
   terminalFontFamily,
   terminalFontSize,
+  resolvedTheme,
   onTerminalFontSizeChange
 }: SessionTabsProps): React.JSX.Element {
   const { t } = useTranslation()
@@ -117,6 +120,7 @@ export function SessionTabs({
                   visible={session.sessionId === activeSessionId}
                   fontFamily={terminalFontFamily}
                   fontSize={terminalFontSize}
+                  resolvedTheme={resolvedTheme}
                   onFontSizeChange={onTerminalFontSizeChange}
                 />
               ))}

@@ -8,14 +8,22 @@ describe('KnownHosts', () => {
   let filePath: string
   let store: KnownHosts
 
-  beforeEach(() => {
+  beforeEach(async () => {
     const dir = mkdtempSync(join(tmpdir(), 'ssh-kh-'))
     filePath = join(dir, 'known_hosts.json')
     store = new KnownHosts(filePath)
+    await store.load()
   })
 
   it('returns unknown for new host', async () => {
     await expect(store.check('h', 22, 'fp1')).resolves.toEqual({ status: 'unknown' })
+  })
+
+  it('checkSync matches async check after load', async () => {
+    expect(store.checkSync('h', 22, 'fp1')).toEqual({ status: 'unknown' })
+    await store.remember('h', 22, 'fp1')
+    expect(store.checkSync('h', 22, 'fp1')).toEqual({ status: 'ok' })
+    expect(store.checkSync('h', 22, 'fp2')).toEqual({ status: 'changed', previous: 'fp1' })
   })
 
   it('returns ok when fingerprint matches', async () => {

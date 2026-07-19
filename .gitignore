@@ -3,8 +3,13 @@
 node_modules
 dist
 out
+release
 .DS_Store
 .eslintcache
 *.log*
+tsconfig.node.tsbuildinfo
 
 .vscode/
+
+# Local design / implementation notes — do not publish
+docs/superpowers/
