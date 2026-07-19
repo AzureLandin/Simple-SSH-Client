@@ -21,6 +21,7 @@
         "build:mac": "npm run build && electron-builder --mac --arm64",
         "build:mac:x64": "npm run build && electron-builder --mac --x64",
         "build:linux": "electron-vite build && electron-builder --linux",
+        "build:linux:pacman": "npm run build && electron-builder --linux pacman --x64",
         "test": "vitest run",
         "test:watch": "vitest",
         "mcp": "npm run build && node ./scripts/nodeshell-mcp.mjs"

@@ -64,10 +64,25 @@ linux:
     - AppImage
     - snap
     - deb
+    - pacman
   maintainer: electronjs.org
   category: Utility
+  icon: build/icon.png
 appImage:
   artifactName: ${productName}-${version}.${ext}
+pacman:
+  artifactName: ${productName}-${version}-x86_64.${ext}
+  # Override defaults: http-parser is not in official Arch repos (AUR-only).
+  depends:
+    - gtk3
+    - libnotify
+    - nss
+    - libxss
+    - libxtst
+    - xdg-utils
+    - at-spi2-core
+    - alsa-lib
+    - libsecret
 npmRebuild: false
 publish:
   provider: generic
