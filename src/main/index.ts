@@ -37,7 +37,7 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   })
 
@@ -65,6 +65,7 @@ app.whenReady().then(async () => {
 
   const store = new ConnectionStore(join(app.getPath('userData'), 'hosts.json'))
   const knownHosts = new KnownHosts(join(app.getPath('userData'), 'known_hosts.json'))
+  await knownHosts.load()
   const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'))
   const credentials = new CredentialStore(
     join(app.getPath('userData'), 'credentials.json'),

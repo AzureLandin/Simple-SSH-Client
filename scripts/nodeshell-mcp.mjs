@@ -20,11 +20,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
  * @returns {{ command: string, args: string[], cwd?: string, mode: 'packaged' | 'dev' }}
  */
 function resolveElectronTarget() {
-  const envExe = process.env.NODESHELL_EXECUTABLE
-  if (envExe && existsSync(envExe)) {
-    return { command: envExe, args: [], mode: 'packaged' }
-  }
-
   // Packaged installer / win-unpacked: resources/mcp/this-file → app root
   const packagedRoot = join(__dirname, '..', '..')
   const packagedCandidates =
@@ -38,6 +33,12 @@ function resolveElectronTarget() {
     if (existsSync(exe)) {
       return { command: exe, args: [], mode: 'packaged' }
     }
+  }
+
+  // Dev / CI override only when not running from an install tree.
+  const envExe = process.env.NODESHELL_EXECUTABLE
+  if (envExe && existsSync(envExe)) {
+    return { command: envExe, args: [], mode: 'packaged' }
   }
 
   // Dev checkout: scripts/this-file → repo root

@@ -1,7 +1,7 @@
 ﻿import { randomUUID } from 'crypto'
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import { dirname } from 'path'
+import { readFile } from 'fs/promises'
 import type { AppError, HostConfig, HostInput } from '../shared/types'
+import { writeJsonAtomic } from './atomic-write'
 
 interface HostsFile {
   hosts: HostConfig[]
@@ -75,8 +75,7 @@ export class ConnectionStore {
 
   private async write(data: HostsFile): Promise<void> {
     try {
-      await mkdir(dirname(this.filePath), { recursive: true })
-      await writeFile(this.filePath, JSON.stringify(data, null, 2), 'utf8')
+      await writeJsonAtomic(this.filePath, data)
     } catch (err) {
       const e = err as Error
       throw configError('CONFIG_WRITE_FAILED', e.message)

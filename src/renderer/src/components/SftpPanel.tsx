@@ -62,6 +62,7 @@ export function SftpPanel({
   const [deleteTarget, setDeleteTarget] = useState<SftpEntry | null>(null)
   /** Session id whose listing is currently cached in UI state. */
   const loadedForSessionRef = useRef<string | null>(null)
+  const requestGenRef = useRef(0)
   const transferClearRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dragDepthRef = useRef(0)
 
@@ -73,20 +74,24 @@ export function SftpPanel({
       loadedForSessionRef.current = null
       return
     }
+    const gen = ++requestGenRef.current
+    const forSession = sessionId
     setLoading(true)
     setError(null)
     try {
       const [path, list] = await Promise.all([
-        window.api.sftp.cwd(sessionId),
-        window.api.sftp.list(sessionId)
+        window.api.sftp.cwd(forSession),
+        window.api.sftp.list(forSession)
       ])
+      if (gen !== requestGenRef.current) return
       setCwd(path)
       setEntries(list)
-      loadedForSessionRef.current = sessionId
+      loadedForSessionRef.current = forSession
     } catch (e) {
+      if (gen !== requestGenRef.current) return
       setError(e instanceof Error ? e.message : t('sftp.error'))
     } finally {
-      setLoading(false)
+      if (gen === requestGenRef.current) setLoading(false)
     }
   }, [sessionId, connected, t])
 
@@ -140,18 +145,23 @@ export function SftpPanel({
 
   const openDir = async (name: string): Promise<void> => {
     if (!sessionId) return
+    const gen = ++requestGenRef.current
+    const forSession = sessionId
     setLoading(true)
     setError(null)
     setSelectedPath(null)
     try {
-      const path = await window.api.sftp.chdir(sessionId, name)
+      const path = await window.api.sftp.chdir(forSession, name)
+      const list = await window.api.sftp.list(forSession)
+      if (gen !== requestGenRef.current) return
       setCwd(path)
-      setEntries(await window.api.sftp.list(sessionId))
-      loadedForSessionRef.current = sessionId
+      setEntries(list)
+      loadedForSessionRef.current = forSession
     } catch (e) {
+      if (gen !== requestGenRef.current) return
       setError(e instanceof Error ? e.message : t('sftp.error'))
     } finally {
-      setLoading(false)
+      if (gen === requestGenRef.current) setLoading(false)
     }
   }
 

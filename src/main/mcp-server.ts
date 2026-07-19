@@ -89,7 +89,9 @@ export async function startMcpServer(
       acceptHostKey: z
         .boolean()
         .optional()
-        .describe('Accept new/changed host key (default true in MCP mode)')
+        .describe(
+          'Accept and store a new or changed host key. Default false — set true only after verifying the fingerprint.'
+        )
     },
     async ({ hostId, password, acceptHostKey }) => {
       try {
@@ -182,10 +184,10 @@ export async function startMcpServer(
 
   server.tool(
     'sftp_upload',
-    'Upload a local file to the remote session current directory (or by remote name).',
+    'Upload a local file under the user home directory to the remote session current directory.',
     {
       sessionId: z.string(),
-      localPath: z.string(),
+      localPath: z.string().describe('Absolute local path under the user home directory'),
       remoteName: z.string().optional()
     },
     async ({ sessionId, localPath, remoteName }) => {
@@ -200,11 +202,11 @@ export async function startMcpServer(
 
   server.tool(
     'sftp_download',
-    'Download a remote file to a local path.',
+    'Download a remote file to a local path under the user home directory.',
     {
       sessionId: z.string(),
       remotePath: z.string(),
-      localPath: z.string()
+      localPath: z.string().describe('Absolute local path under the user home directory')
     },
     async ({ sessionId, remotePath, localPath }) => {
       try {

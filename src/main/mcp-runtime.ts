@@ -5,6 +5,7 @@ import type { ConnectOptions, HostConfig } from '../shared/types'
 import type { ConnectionStore } from './connection-store'
 import type { CredentialStore } from './credential-store'
 import type { KnownHosts } from './known-hosts'
+import { assertLocalPathUnderHome } from './local-path-guard'
 import { SftpService } from './sftp-service'
 import { SshClient } from './ssh-client'
 
@@ -96,7 +97,7 @@ export class McpRuntime {
         host,
         password: options.password ?? saved?.password,
         privateKey: saved?.privateKey,
-        acceptHostKey: options.acceptHostKey ?? true
+        acceptHostKey: options.acceptHostKey ?? false
       })
     } catch (err) {
       client.dispose()
@@ -222,12 +223,14 @@ export class McpRuntime {
   }
 
   async sftpUpload(sessionId: string, localPath: string, remoteName?: string): Promise<void> {
-    await this.sftp.upload(sessionId, localPath, remoteName ?? basename(localPath))
+    const safeLocal = await assertLocalPathUnderHome(localPath)
+    await this.sftp.upload(sessionId, safeLocal, remoteName ?? basename(safeLocal))
   }
 
   async sftpDownload(sessionId: string, remotePath: string, localPath: string): Promise<void> {
-    await mkdir(dirname(localPath), { recursive: true })
-    await this.sftp.download(sessionId, remotePath, localPath)
+    const safeLocal = await assertLocalPathUnderHome(localPath)
+    await mkdir(dirname(safeLocal), { recursive: true })
+    await this.sftp.download(sessionId, remotePath, safeLocal)
   }
 
   disposeAll(): void {

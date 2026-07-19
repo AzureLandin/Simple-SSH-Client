@@ -1,6 +1,6 @@
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import { dirname } from 'path'
+import { readFile } from 'fs/promises'
 import type { AppError } from '../shared/types'
+import { writeJsonAtomic } from './atomic-write'
 
 export interface CredentialSecrets {
   password?: string
@@ -90,8 +90,7 @@ export class CredentialStore {
 
   private async write(data: VaultFile): Promise<void> {
     try {
-      await mkdir(dirname(this.filePath), { recursive: true })
-      await writeFile(this.filePath, JSON.stringify(data, null, 2), 'utf8')
+      await writeJsonAtomic(this.filePath, data)
     } catch (err) {
       const e = err as Error
       throw configError('CONFIG_WRITE_FAILED', e.message)

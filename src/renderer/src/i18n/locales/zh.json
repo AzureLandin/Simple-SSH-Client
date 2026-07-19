@@ -39,6 +39,9 @@
     "hostKeyChangedTitle": "主机密钥变更",
     "hostKeyChanged": "{{message}}\n\n主机密钥已变更。是否接受新密钥并连接？",
     "hostKeyChangedReconnect": "{{message}}\n\n主机密钥已变更。是否接受新密钥并重新连接？",
+    "hostKeyUnknownTitle": "未知主机密钥",
+    "hostKeyUnknown": "{{message}}\n\n这是首次连接该主机。是否信任并保存此密钥？",
+    "hostKeyUnknownReconnect": "{{message}}\n\n这是首次连接该主机。是否信任并保存此密钥后重新连接？",
     "hostNotFound": "未找到主机配置",
     "connectionFailed": "连接失败",
     "reconnectFailed": "重连失败",
@@ -46,7 +49,10 @@
     "saveCredentials": "是否保存主机「{{name}}」的登录凭据？密码或私钥将使用系统加密安全存储。",
     "saveCredentialsConfirm": "保存",
     "saveCredentialsSkip": "暂不",
-    "credentialsUnavailable": "当前系统无法安全保存凭据"
+    "credentialsUnavailable": "当前系统无法安全保存凭据",
+    "authFailed": "认证失败：用户名或密码不正确",
+    "hostUnreachable": "无法连接主机（网络不可达或端口未开放）",
+    "timeout": "连接超时"
   },
   "common": {
     "dismiss": "关闭",

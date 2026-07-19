@@ -39,6 +39,9 @@
     "hostKeyChangedTitle": "Host key changed",
     "hostKeyChanged": "{{message}}\n\nThe host key has changed. Accept the new key and connect?",
     "hostKeyChangedReconnect": "{{message}}\n\nThe host key has changed. Accept the new key and reconnect?",
+    "hostKeyUnknownTitle": "Unknown host key",
+    "hostKeyUnknown": "{{message}}\n\nThis is the first connection to this host. Trust and save this key?",
+    "hostKeyUnknownReconnect": "{{message}}\n\nThis is the first connection to this host. Trust and save this key, then reconnect?",
     "hostNotFound": "Host configuration not found",
     "connectionFailed": "Connection failed",
     "reconnectFailed": "Reconnection failed",
@@ -46,7 +49,10 @@
     "saveCredentials": "Save login credentials for \"{{name}}\"? Password or private key will be stored using OS encryption.",
     "saveCredentialsConfirm": "Save",
     "saveCredentialsSkip": "Not now",
-    "credentialsUnavailable": "Secure credential storage is unavailable on this system"
+    "credentialsUnavailable": "Secure credential storage is unavailable on this system",
+    "authFailed": "Authentication failed: incorrect username or password",
+    "hostUnreachable": "Host unreachable (network or port closed)",
+    "timeout": "Connection timed out"
   },
   "common": {
     "dismiss": "Dismiss",

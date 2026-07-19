@@ -11,6 +11,7 @@ import { SidebarPanel } from './components/SidebarPanel'
 import { Toast } from './components/Toast'
 import { useHosts } from './hooks/useHosts'
 import { ConnectError, type UiSession, useSessions } from './hooks/useSessions'
+import { parseIpcThrownError } from '../../shared/ipc-error'
 import i18n from './i18n'
 import {
   applyResolvedTheme,
@@ -177,6 +178,22 @@ function App(): React.JSX.Element {
       setConfirmRequest({ ...request, resolve })
     })
 
+  const localizeConnectError = (e: unknown, fallbackKey: 'auth.connectionFailed' | 'auth.reconnectFailed'): string => {
+    const parsed = e instanceof ConnectError ? { code: e.code, message: e.message } : parseIpcThrownError(e)
+    const code = parsed.code
+    const parsedMessage = parsed.message
+    if (
+      code === 'AUTH_FAILED' ||
+      /authentication failed/i.test(parsedMessage) ||
+      parsedMessage.includes('"AUTH_FAILED"')
+    ) {
+      return t('auth.authFailed')
+    }
+    if (code === 'HOST_UNREACHABLE' || code === 'CONNECTION_REFUSED') return t('auth.hostUnreachable')
+    if (code === 'TIMEOUT') return t('auth.timeout')
+    return parsedMessage || t(fallbackKey)
+  }
+
   const handleLanguageChange = async (next: LanguageCode): Promise<void> => {
     const previous = language
     setLanguage(next)
@@ -298,20 +315,34 @@ function App(): React.JSX.Element {
       setHostsOpen(false)
       await maybePromptSaveCredentials(host, options?.password)
     } catch (e) {
-      if (e instanceof ConnectError && e.code === 'HOST_KEY_CHANGED') {
+      if (
+        e instanceof ConnectError &&
+        (e.code === 'HOST_KEY_CHANGED' || e.code === 'HOST_KEY_UNKNOWN')
+      ) {
+        const isUnknown = e.code === 'HOST_KEY_UNKNOWN'
         const accept = await askConfirm({
-          title: t('auth.hostKeyChangedTitle'),
-          message: t('auth.hostKeyChanged', { message: e.message })
+          title: isUnknown ? t('auth.hostKeyUnknownTitle') : t('auth.hostKeyChangedTitle'),
+          message: isUnknown
+            ? t('auth.hostKeyUnknown', { message: e.message })
+            : t('auth.hostKeyChanged', { message: e.message })
         })
         if (accept) {
           await runConnect(host, { ...options, acceptHostKey: true })
           return
         }
-        setToast(e.message)
+        setToast(localizeConnectError(e, 'auth.connectionFailed'))
         return
       }
-      const message = e instanceof Error ? e.message : t('auth.connectionFailed')
-      setToast(message)
+      if (
+        e instanceof ConnectError &&
+        e.code === 'AUTH_FAILED' &&
+        host.authMethod === 'password'
+      ) {
+        setToast(localizeConnectError(e, 'auth.connectionFailed'))
+        setPasswordAction({ type: 'connect', host })
+        return
+      }
+      setToast(localizeConnectError(e, 'auth.connectionFailed'))
     }
   }
 
@@ -339,20 +370,34 @@ function App(): React.JSX.Element {
       await reconnect(session, host, options)
       setPasswordAction(null)
     } catch (e) {
-      if (e instanceof ConnectError && e.code === 'HOST_KEY_CHANGED') {
+      if (
+        e instanceof ConnectError &&
+        (e.code === 'HOST_KEY_CHANGED' || e.code === 'HOST_KEY_UNKNOWN')
+      ) {
+        const isUnknown = e.code === 'HOST_KEY_UNKNOWN'
         const accept = await askConfirm({
-          title: t('auth.hostKeyChangedTitle'),
-          message: t('auth.hostKeyChangedReconnect', { message: e.message })
+          title: isUnknown ? t('auth.hostKeyUnknownTitle') : t('auth.hostKeyChangedTitle'),
+          message: isUnknown
+            ? t('auth.hostKeyUnknownReconnect', { message: e.message })
+            : t('auth.hostKeyChangedReconnect', { message: e.message })
         })
         if (accept) {
           await runReconnect(session, host, { ...options, acceptHostKey: true })
           return
         }
-        setToast(e.message)
+        setToast(localizeConnectError(e, 'auth.reconnectFailed'))
         return
       }
-      const message = e instanceof Error ? e.message : t('auth.reconnectFailed')
-      setToast(message)
+      if (
+        e instanceof ConnectError &&
+        e.code === 'AUTH_FAILED' &&
+        host.authMethod === 'password'
+      ) {
+        setToast(localizeConnectError(e, 'auth.reconnectFailed'))
+        setPasswordAction({ type: 'reconnect', session, host })
+        return
+      }
+      setToast(localizeConnectError(e, 'auth.reconnectFailed'))
     }
   }
 
@@ -404,7 +449,11 @@ function App(): React.JSX.Element {
     void attemptReconnect(session, host)
   }
 
-  const toastMessage = sessionsToast ?? hostsError
+  const toastMessage = sessionsToast
+    ? localizeConnectError(sessionsToast, 'auth.connectionFailed')
+    : hostsError
+      ? localizeConnectError(hostsError, 'auth.connectionFailed')
+      : null
 
   return (
     <div className="app">

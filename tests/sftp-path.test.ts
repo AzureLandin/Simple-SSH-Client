@@ -13,7 +13,14 @@ describe('joinRemote', () => {
     expect(joinRemote('/', '..')).toBe('/')
   })
 
+  it('normalizes embedded .. segments', () => {
+    expect(joinRemote('/home/user', 'docs/../../etc/passwd')).toBe('/home/etc/passwd')
+    expect(joinRemote('/home/user', 'a/b/../c')).toBe('/home/user/a/c')
+    expect(joinRemote('/home/user', '../../../etc')).toBe('/etc')
+  })
+
   it('keeps absolute paths', () => {
     expect(joinRemote('/home', '/etc')).toBe('/etc')
+    expect(joinRemote('/home', '/etc/../tmp')).toBe('/tmp')
   })
 })

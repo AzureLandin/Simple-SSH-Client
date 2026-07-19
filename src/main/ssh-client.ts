@@ -2,7 +2,7 @@ import { createHash } from 'crypto'
 import { readFile } from 'fs/promises'
 import { Client, type ClientChannel, type ConnectConfig } from 'ssh2'
 import { mapSshError } from '../shared/map-ssh-error'
-import type { HostConfig } from '../shared/types'
+import type { AppError, HostConfig } from '../shared/types'
 import type { KnownHosts } from './known-hosts'
 
 export interface SshConnectParams {
@@ -22,18 +22,38 @@ export class SshClient {
   constructor(private readonly knownHosts: KnownHosts) {}
 
   async connect(params: SshConnectParams): Promise<void> {
-    const { host, password, privateKey, acceptHostKey, cols = 80, rows = 24 } = params
+    const { host, password, privateKey, acceptHostKey = false, cols = 80, rows = 24 } = params
 
     let fingerprint = ''
+    let hostKeyReject: AppError | null = null
+
     const config: ConnectConfig = {
       host: host.host,
       port: host.port,
       username: host.username,
       readyTimeout: 20000,
+      // Enforce known_hosts BEFORE authentication so credentials are never sent
+      // to an unknown or changed host key unless the caller opted in.
       hostVerifier: (key) => {
-        const buf = Buffer.isBuffer(key) ? key : Buffer.from((key as { getPublicSSH?: () => Buffer }).getPublicSSH?.() ?? [])
+        const buf = Buffer.isBuffer(key)
+          ? key
+          : Buffer.from((key as { getPublicSSH?: () => Buffer }).getPublicSSH?.() ?? [])
         fingerprint = createHash('sha256').update(buf).digest('base64')
-        return true
+        const check = this.knownHosts.checkSync(host.host, host.port, fingerprint)
+        if (check.status === 'ok') return true
+        if (acceptHostKey) return true
+        if (check.status === 'unknown') {
+          hostKeyReject = {
+            code: 'HOST_KEY_UNKNOWN',
+            message: `Unknown host key (SHA256:${fingerprint})`
+          }
+          return false
+        }
+        hostKeyReject = {
+          code: 'HOST_KEY_CHANGED',
+          message: `Host key has changed (was SHA256:${check.previous}, now SHA256:${fingerprint})`
+        }
+        return false
       }
     }
 
@@ -46,25 +66,53 @@ export class SshClient {
         throw { code: 'AUTH_FAILED', message: 'Private key path missing' }
       }
     } else {
+      // Some servers advertise keyboard-interactive instead of (or in addition
+      // to) password. Enable both and answer interactive prompts with the password.
       config.password = password
+      config.tryKeyboard = true
     }
 
-    await new Promise<void>((resolve, reject) => {
-      const client = new Client()
-      this.client = client
-      client
-        .on('ready', () => resolve())
-        .on('error', (err) => reject(mapSshError(err)))
-        .connect(config)
-    })
-
-    const check = await this.knownHosts.check(host.host, host.port, fingerprint)
-    if (check.status === 'changed' && !acceptHostKey) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const client = new Client()
+        this.client = client
+        client
+          .on('ready', () => resolve())
+          .on('error', (err) => {
+            if (hostKeyReject) {
+              reject(hostKeyReject)
+              return
+            }
+            reject(mapSshError(err))
+          })
+          .on('keyboard-interactive', (_name, _instructions, _lang, prompts, finish) => {
+            const answers = prompts.map((p) => {
+              const prompt = String(p.prompt ?? '')
+              if (/password/i.test(prompt) || p.echo === false) return password ?? ''
+              return ''
+            })
+            finish(answers)
+          })
+          .connect(config)
+      })
+    } catch (err) {
       this.dispose()
-      throw { code: 'HOST_KEY_CHANGED', message: 'Host key has changed' }
+      if (hostKeyReject) throw hostKeyReject
+      throw err
     }
-    if (check.status === 'unknown' || (check.status === 'changed' && acceptHostKey)) {
+
+    if (acceptHostKey && fingerprint) {
       await this.knownHosts.remember(host.host, host.port, fingerprint)
+    } else {
+      // Defensive: ensure cache agrees after connect (ok path).
+      const check = this.knownHosts.checkSync(host.host, host.port, fingerprint)
+      if (check.status !== 'ok') {
+        this.dispose()
+        throw {
+          code: check.status === 'changed' ? 'HOST_KEY_CHANGED' : 'HOST_KEY_UNKNOWN',
+          message: 'Host key verification failed after connect'
+        }
+      }
     }
 
     await new Promise<void>((resolve, reject) => {

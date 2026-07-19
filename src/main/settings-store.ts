@@ -1,6 +1,6 @@
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import { dirname } from 'path'
+import { readFile } from 'fs/promises'
 import type { AppError, AppSettings, LanguageCode, ThemePreference } from '../shared/types'
+import { writeJsonAtomic } from './atomic-write'
 
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'zh',
@@ -122,12 +122,7 @@ export class SettingsStore {
 
   private async write(data: AppSettings): Promise<void> {
     try {
-      await mkdir(dirname(this.filePath), { recursive: true })
-    } catch {
-      /* ignore */
-    }
-    try {
-      await writeFile(this.filePath, JSON.stringify(data, null, 2), 'utf8')
+      await writeJsonAtomic(this.filePath, data)
     } catch (err) {
       const e = err as Error
       throw configError('CONFIG_WRITE_FAILED', e.message)

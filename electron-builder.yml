@@ -4,13 +4,16 @@ directories:
   buildResources: build
   output: release
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!scripts/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # Whitelist only — packing .worktrees / junk previously mangled app.asar on Windows
+  # (package.json became binary garbage → "Unable to parse ... Unexpected token").
+  - '!**/*'
+  - package.json
+  - out
+  - out/**/*
+  - resources
+  - resources/**/*
+  - node_modules
+  - node_modules/**/*
 asarUnpack:
   - 'resources/**'
 extraResources:
