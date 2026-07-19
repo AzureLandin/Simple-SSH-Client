@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { HostConfig, LanguageCode, ThemePreference } from '../../shared/types'
 import { ConfirmModal } from './components/ConfirmModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import type { HostFormSubmit } from './components/HostForm'
 import { HostPickerModal } from './components/HostPickerModal'
 import { ModalShell, useModalClose } from './components/ModalShell'
 import { SessionTabs } from './components/SessionTabs'
@@ -35,10 +36,12 @@ type ConfirmRequest = {
 function PasswordModalBody({
   host,
   busy,
+  error,
   onSubmit
 }: {
   host: HostConfig
   busy: boolean
+  error: string | null
   onSubmit: (password: string) => void
 }): React.JSX.Element {
   const { t } = useTranslation()
@@ -52,7 +55,7 @@ function PasswordModalBody({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       <h3 id="password-modal-title" className="modal-title">
         {t('auth.passwordTitle', { name: host.name })}
       </h3>
@@ -68,8 +71,16 @@ function PasswordModalBody({
           autoFocus
           required
           disabled={busy}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? 'password-modal-error' : undefined}
+          className={error ? 'input-invalid' : undefined}
         />
       </label>
+      {error && (
+        <p id="password-modal-error" className="form-inline-error" role="alert">
+          {error}
+        </p>
+      )}
       <div className="form-actions">
         <button type="button" className="btn-secondary" onClick={requestClose} disabled={busy}>
           {t('form.cancel')}
@@ -85,11 +96,13 @@ function PasswordModalBody({
 function PasswordModal({
   host,
   busy,
+  error,
   onSubmit,
   onCancel
 }: {
   host: HostConfig
   busy: boolean
+  error: string | null
   onSubmit: (password: string) => void
   onCancel: () => void
 }): React.JSX.Element {
@@ -101,7 +114,7 @@ function PasswordModal({
       closeOnEscape={!busy}
       closeOnOverlayClick={false}
     >
-      <PasswordModalBody host={host} busy={busy} onSubmit={onSubmit} />
+      <PasswordModalBody host={host} busy={busy} error={error} onSubmit={onSubmit} />
     </ModalShell>
   )
 }
@@ -122,6 +135,7 @@ function App(): React.JSX.Element {
   } = useSessions()
 
   const [passwordAction, setPasswordAction] = useState<PasswordAction | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [language, setLanguage] = useState<LanguageCode>('zh')
   const [themePreference, setThemePreference] = useState<ThemePreference>('system')
@@ -192,6 +206,11 @@ function App(): React.JSX.Element {
     if (code === 'HOST_UNREACHABLE' || code === 'CONNECTION_REFUSED') return t('auth.hostUnreachable')
     if (code === 'TIMEOUT') return t('auth.timeout')
     return parsedMessage || t(fallbackKey)
+  }
+
+  const hostKeyFingerprintLabel = (message: string): string => {
+    const match = message.match(/SHA256:[A-Za-z0-9+/=]+/)
+    return match ? `SHA256:\n${match[0].slice('SHA256:'.length)}` : message
   }
 
   const handleLanguageChange = async (next: LanguageCode): Promise<void> => {
@@ -311,6 +330,7 @@ function App(): React.JSX.Element {
   ): Promise<void> => {
     try {
       await connect(host, options)
+      setPasswordError(null)
       setPasswordAction(null)
       setHostsOpen(false)
       await maybePromptSaveCredentials(host, options?.password)
@@ -323,8 +343,8 @@ function App(): React.JSX.Element {
         const accept = await askConfirm({
           title: isUnknown ? t('auth.hostKeyUnknownTitle') : t('auth.hostKeyChangedTitle'),
           message: isUnknown
-            ? t('auth.hostKeyUnknown', { message: e.message })
-            : t('auth.hostKeyChanged', { message: e.message })
+            ? t('auth.hostKeyUnknown', { fingerprint: hostKeyFingerprintLabel(e.message) })
+            : t('auth.hostKeyChanged', { fingerprint: hostKeyFingerprintLabel(e.message) })
         })
         if (accept) {
           await runConnect(host, { ...options, acceptHostKey: true })
@@ -338,7 +358,7 @@ function App(): React.JSX.Element {
         e.code === 'AUTH_FAILED' &&
         host.authMethod === 'password'
       ) {
-        setToast(localizeConnectError(e, 'auth.connectionFailed'))
+        setPasswordError(t('auth.authFailed'))
         setPasswordAction({ type: 'connect', host })
         return
       }
@@ -368,6 +388,7 @@ function App(): React.JSX.Element {
   ): Promise<void> => {
     try {
       await reconnect(session, host, options)
+      setPasswordError(null)
       setPasswordAction(null)
     } catch (e) {
       if (
@@ -378,8 +399,12 @@ function App(): React.JSX.Element {
         const accept = await askConfirm({
           title: isUnknown ? t('auth.hostKeyUnknownTitle') : t('auth.hostKeyChangedTitle'),
           message: isUnknown
-            ? t('auth.hostKeyUnknownReconnect', { message: e.message })
-            : t('auth.hostKeyChangedReconnect', { message: e.message })
+            ? t('auth.hostKeyUnknownReconnect', {
+                fingerprint: hostKeyFingerprintLabel(e.message)
+              })
+            : t('auth.hostKeyChangedReconnect', {
+                fingerprint: hostKeyFingerprintLabel(e.message)
+              })
         })
         if (accept) {
           await runReconnect(session, host, { ...options, acceptHostKey: true })
@@ -393,7 +418,7 @@ function App(): React.JSX.Element {
         e.code === 'AUTH_FAILED' &&
         host.authMethod === 'password'
       ) {
-        setToast(localizeConnectError(e, 'auth.reconnectFailed'))
+        setPasswordError(t('auth.authFailed'))
         setPasswordAction({ type: 'reconnect', session, host })
         return
       }
@@ -417,9 +442,38 @@ function App(): React.JSX.Element {
     }
   }
 
+  const handleCreateHost = async ({ input, password }: HostFormSubmit): Promise<void> => {
+    const host = await create(input)
+    setHostsOpen(false)
+    void attemptConnect(host, password ? { password } : undefined)
+  }
+
+  const handleUpdateHost = async (
+    id: string,
+    { input, password }: HostFormSubmit
+  ): Promise<void> => {
+    await update(id, input)
+    if (!password) return
+    try {
+      const available = await window.api.credentials.isAvailable()
+      if (!available) {
+        setToast(t('auth.credentialsUnavailable'))
+        return
+      }
+      await window.api.credentials.save(id, {
+        password,
+        ...(input.privateKeyPath ? { privateKeyPath: input.privateKeyPath } : {})
+      })
+      await refresh()
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : t('auth.credentialsUnavailable'))
+    }
+  }
+
   const handleConnect = (host: HostConfig): void => {
     if (connectingRef.current) return
     if (host.authMethod === 'password' && !host.credentialsSaved) {
+      setPasswordError(null)
       setPasswordAction({ type: 'connect', host })
       return
     }
@@ -428,6 +482,7 @@ function App(): React.JSX.Element {
 
   const handlePasswordSubmit = (password: string): void => {
     if (!passwordAction || connectingRef.current) return
+    setPasswordError(null)
     if (passwordAction.type === 'connect') {
       void attemptConnect(passwordAction.host, { password })
     } else {
@@ -443,6 +498,7 @@ function App(): React.JSX.Element {
       return
     }
     if (host.authMethod === 'password' && !host.credentialsSaved) {
+      setPasswordError(null)
       setPasswordAction({ type: 'reconnect', host, session })
       return
     }
@@ -495,8 +551,8 @@ function App(): React.JSX.Element {
           hosts={hosts}
           connecting={connecting}
           onConnect={handleConnect}
-          onCreate={create}
-          onUpdate={update}
+          onCreate={(result) => handleCreateHost(result)}
+          onUpdate={(id, result) => handleUpdateHost(id, result)}
           onRemove={remove}
           onClose={() => setHostsOpen(false)}
         />
@@ -522,9 +578,13 @@ function App(): React.JSX.Element {
         <PasswordModal
           host={passwordAction.host}
           busy={connecting}
+          error={passwordError}
           onSubmit={handlePasswordSubmit}
           onCancel={() => {
-            if (!connectingRef.current) setPasswordAction(null)
+            if (!connectingRef.current) {
+              setPasswordError(null)
+              setPasswordAction(null)
+            }
           }}
         />
       )}

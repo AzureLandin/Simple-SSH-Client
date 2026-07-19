@@ -30,7 +30,7 @@ export function ConfirmModal({
   }, [onCancel])
 
   return (
-    <div className="modal-overlay" role="presentation" onClick={onCancel}>
+    <div className="modal-overlay confirm-modal-overlay" role="presentation" onClick={onCancel}>
       <div
         className="modal confirm-modal"
         role="dialog"

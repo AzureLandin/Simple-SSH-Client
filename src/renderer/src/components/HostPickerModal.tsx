@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { HostConfig, HostInput } from '../../../shared/types'
-import { HostForm } from './HostForm'
+import type { HostConfig } from '../../../shared/types'
+import { ConfirmModal } from './ConfirmModal'
+import { HostForm, type HostFormSubmit } from './HostForm'
 import { ModalShell, useModalClose } from './ModalShell'
 
 interface HostPickerModalProps {
   hosts: HostConfig[]
   connecting?: boolean
   onConnect: (host: HostConfig) => void
-  onCreate: (input: HostInput) => Promise<void>
-  onUpdate: (id: string, patch: Partial<HostInput>) => Promise<void>
+  onCreate: (result: HostFormSubmit) => Promise<void>
+  onUpdate: (id: string, result: HostFormSubmit) => Promise<void>
   onRemove: (id: string) => Promise<void>
   onClose: () => void
 }
@@ -29,25 +30,32 @@ function HostPickerModalBody({
   hosts: HostConfig[]
   connecting: boolean
   onConnect: (host: HostConfig) => void
-  onCreate: (input: HostInput) => Promise<void>
-  onUpdate: (id: string, patch: Partial<HostInput>) => Promise<void>
+  onCreate: (result: HostFormSubmit) => Promise<void>
+  onUpdate: (id: string, result: HostFormSubmit) => Promise<void>
   onRemove: (id: string) => Promise<void>
   formMode: FormMode | null
   setFormMode: (mode: FormMode | null) => void
 }): React.JSX.Element {
   const { t } = useTranslation()
   const requestClose = useModalClose()
+  const [pendingDelete, setPendingDelete] = useState<HostConfig | null>(null)
 
-  const handleDelete = async (host: HostConfig): Promise<void> => {
-    if (!window.confirm(t('hosts.deleteConfirm', { name: host.name }))) return
+  const handleDelete = (host: HostConfig): void => {
+    setPendingDelete(host)
+  }
+
+  const confirmDelete = async (): Promise<void> => {
+    if (!pendingDelete) return
+    const host = pendingDelete
+    setPendingDelete(null)
     await onRemove(host.id)
   }
 
-  const handleFormSubmit = async (input: HostInput): Promise<void> => {
+  const handleFormSubmit = async (result: HostFormSubmit): Promise<void> => {
     if (formMode?.type === 'edit') {
-      await onUpdate(formMode.host.id, input)
+      await onUpdate(formMode.host.id, result)
     } else {
-      await onCreate(input)
+      await onCreate(result)
     }
     setFormMode(null)
   }
@@ -151,7 +159,7 @@ function HostPickerModalBody({
                 <button
                   type="button"
                   className="btn-danger btn-sm"
-                  onClick={() => void handleDelete(host)}
+                  onClick={() => handleDelete(host)}
                 >
                   {t('hosts.delete')}
                 </button>
@@ -160,6 +168,16 @@ function HostPickerModalBody({
           )
         })}
       </ul>
+      )}
+      {pendingDelete && (
+        <ConfirmModal
+          title={t('hosts.delete')}
+          message={t('hosts.deleteConfirm', { name: pendingDelete.name })}
+          confirmLabel={t('common.confirm')}
+          cancelLabel={t('common.cancel')}
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </>
   )

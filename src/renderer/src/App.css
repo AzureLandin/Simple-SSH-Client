@@ -744,6 +744,10 @@ button.sftp-item-main {
   z-index: 1100;
 }
 
+.confirm-modal-overlay {
+  z-index: 1200;
+}
+
 /* ModalShell staged open/close — legacy overlays keep solid dim above */
 .modal-overlay--animated {
   background: rgba(0, 0, 0, 0);
@@ -761,10 +765,23 @@ button.sftp-item-main {
 .modal {
   background: var(--bg-card);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  padding: 16px;
-  width: min(360px, calc(100vw - 32px));
+  border-radius: 8px;
+  padding: 20px 22px 18px;
+  width: min(380px, calc(100vw - 40px));
+  max-width: calc(100vw - 40px);
+  box-sizing: border-box;
+  overflow-x: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.modal.password-modal,
+.modal.confirm-modal {
+  width: min(420px, calc(100vw - 40px));
+  padding: 22px 24px 20px;
+}
+
+.modal.confirm-modal {
+  width: min(460px, calc(100vw - 40px));
 }
 
 .modal.modal--animated {
@@ -811,15 +828,19 @@ button.sftp-item-main {
 }
 
 .modal-title {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   font-size: 16px;
   font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .modal-subtitle {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 12px;
   color: var(--text-subtle);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .modal.settings-modal {
@@ -1081,11 +1102,14 @@ button.sftp-item-main {
 }
 
 .confirm-modal-message {
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--text-tertiary);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 /* Host list */
@@ -1670,6 +1694,21 @@ button.sftp-item-main {
   box-shadow: 0 0 0 2px var(--accent-focus-ring);
 }
 
+.form-field input.input-invalid,
+.form-field input.input-invalid:focus {
+  border-color: var(--border-danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--text-error) 25%, transparent);
+}
+
+.form-inline-error {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-error);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* Hide native number spinners (Windows chrome looks out of place on dark UI) */
 .form-field input[type='number'] {
   -moz-appearance: textfield;
@@ -1824,7 +1863,19 @@ button.sftp-item-main {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  margin-top: 4px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.password-modal .form-field input,
+.confirm-modal .form-field input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.password-modal .form-field,
+.confirm-modal .form-field {
+  min-width: 0;
 }
 
 /* Buttons */

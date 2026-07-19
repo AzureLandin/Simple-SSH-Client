@@ -18,9 +18,10 @@ export function useHosts() {
     void refresh()
   }, [refresh])
 
-  const create = async (input: HostInput) => {
-    await window.api.hosts.create(input)
+  const create = async (input: HostInput): Promise<HostConfig> => {
+    const host = await window.api.hosts.create(input)
     await refresh()
+    return host
   }
 
   const update = async (id: string, patch: Partial<HostInput>) => {
