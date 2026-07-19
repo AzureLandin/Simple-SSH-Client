@@ -17,10 +17,13 @@ const api: ElectronApi = {
   sessions: {
     connect: (hostId, options?: ConnectOptions) =>
       ipcRenderer.invoke(IPC.sessionsConnect, hostId, options),
-    write: (sessionId, data) => ipcRenderer.invoke(IPC.sessionsWrite, sessionId, data),
+    write: (sessionId, data) => {
+      ipcRenderer.send(IPC.sessionsWrite, sessionId, data)
+    },
     resize: (sessionId, cols, rows) =>
       ipcRenderer.invoke(IPC.sessionsResize, sessionId, cols, rows),
     disconnect: (sessionId) => ipcRenderer.invoke(IPC.sessionsDisconnect, sessionId),
+    cancelConnect: () => ipcRenderer.invoke(IPC.sessionsCancelConnect),
     onData: (cb) => {
       const listener = (_: Electron.IpcRendererEvent, payload: Parameters<typeof cb>[0]) => cb(payload)
       ipcRenderer.on(IPC.sessionData, listener)

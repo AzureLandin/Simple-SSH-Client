@@ -44,6 +44,7 @@ export type SshErrorCode =
   | 'CONFIG_WRITE_FAILED'
   | 'SESSION_NOT_FOUND'
   | 'MCP_SESSION_LIMIT'
+  | 'CANCELLED'
   | 'UNKNOWN'
 
 export interface AppError {
@@ -120,9 +121,10 @@ export interface ElectronApi {
       hostId: string,
       options?: ConnectOptions
     ) => Promise<{ sessionId: string }>
-    write: (sessionId: string, data: string) => Promise<void>
+    write: (sessionId: string, data: string) => void
     resize: (sessionId: string, cols: number, rows: number) => Promise<void>
     disconnect: (sessionId: string) => Promise<void>
+    cancelConnect: () => Promise<void>
     onData: (cb: (event: SessionDataEvent) => void) => () => void
     onClosed: (cb: (event: SessionClosedEvent) => void) => () => void
     onError: (cb: (event: SessionErrorEvent) => void) => () => void
@@ -212,6 +214,7 @@ export const IPC = {
   sessionsWrite: 'sessions:write',
   sessionsResize: 'sessions:resize',
   sessionsDisconnect: 'sessions:disconnect',
+  sessionsCancelConnect: 'sessions:cancelConnect',
   sessionData: 'session:data',
   sessionClosed: 'session:closed',
   sessionError: 'session:error',

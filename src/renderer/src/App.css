@@ -1506,6 +1506,86 @@ button.sftp-item-main {
   gap: 8px;
 }
 
+.host-picker-banner {
+  flex-shrink: 0;
+  padding: 12px 12px 0;
+  box-sizing: border-box;
+}
+
+.host-picker-connecting {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  animation: host-picker-banner-in 200ms ease-out both;
+}
+
+.host-picker-connecting-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.host-picker-connecting--error {
+  border-color: var(--border-danger);
+  background: color-mix(in srgb, var(--text-error) 10%, var(--bg-card));
+}
+
+.host-picker-connecting-status {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+  flex: 1;
+}
+
+.host-picker-connecting-error {
+  color: var(--text-error);
+}
+
+.host-picker-connecting-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-subtle);
+  overflow-wrap: anywhere;
+}
+
+.host-picker-connecting > .btn-secondary {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+@keyframes host-picker-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .host-picker-connecting {
+    animation: none;
+  }
+}
+
 .host-picker-list {
   list-style: none;
   margin: 0;
@@ -1857,6 +1937,13 @@ button.sftp-item-main {
 
 .form-field-row input {
   flex: 1;
+  min-width: 0;
+}
+
+.password-field-row .password-visibility-toggle {
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-width: 3.5em;
 }
 
 .form-actions {
@@ -1871,6 +1958,10 @@ button.sftp-item-main {
 .confirm-modal .form-field input {
   width: 100%;
   box-sizing: border-box;
+}
+
+.password-modal .password-field-row input {
+  width: auto;
 }
 
 .password-modal .form-field,

@@ -22,6 +22,10 @@ describe('monitor-parse', () => {
     expect(script).toContain('\nif [ -z "$out" ]')
   })
 
+  it('returns a cached monitor script string', () => {
+    expect(getMonitorScript()).toBe(getMonitorScript())
+  })
+
   it('parses cpu line and percent delta', () => {
     const a = parseCpuStatLine('cpu  100 0 50 850 0 0 0 0')
     const b = parseCpuStatLine('cpu  150 0 70 880 0 0 0 0')

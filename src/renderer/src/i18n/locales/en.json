@@ -19,6 +19,8 @@
     "password": "Password",
     "passwordLeaveBlank": "Leave blank to keep unchanged",
     "passwordRequired": "Password is required",
+    "showPassword": "Show",
+    "hidePassword": "Hide",
     "privateKey": "Private key",
     "privateKeyPath": "Private key path",
     "privateKeyRequired": "Select a private key file",
@@ -57,8 +59,14 @@
     "saveCredentialsSkip": "Not now",
     "credentialsUnavailable": "Secure credential storage is unavailable on this system",
     "authFailed": "Authentication failed: incorrect username or password",
-    "hostUnreachable": "Host unreachable (network or port closed)",
-    "timeout": "Connection timed out"
+    "hostUnreachable": "Cannot resolve or reach host {{host}}; check the address and network",
+    "timeout": "Connection timed out: {{host}}:{{port}} did not respond. Check address, port, or firewall",
+    "connectionRefused": "Connection refused: confirm {{host}}:{{port}} is correct and SSH is listening",
+    "cancelled": "Connection cancelled",
+    "connectingStatus": "Connecting to {{name}} ({{host}}:{{port}})…",
+    "connectingHint": "If this takes too long, check that the address and port are correct",
+    "connecting": "Connecting…",
+    "cancelConnect": "Cancel"
   },
   "common": {
     "dismiss": "Dismiss",

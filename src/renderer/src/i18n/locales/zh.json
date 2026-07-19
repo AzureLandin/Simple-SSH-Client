@@ -19,6 +19,8 @@
     "password": "密码",
     "passwordLeaveBlank": "留空表示不修改",
     "passwordRequired": "请输入密码",
+    "showPassword": "显示",
+    "hidePassword": "隐藏",
     "privateKey": "私钥",
     "privateKeyPath": "私钥路径",
     "privateKeyRequired": "请选择私钥文件",
@@ -57,8 +59,14 @@
     "saveCredentialsSkip": "暂不",
     "credentialsUnavailable": "当前系统无法安全保存凭据",
     "authFailed": "认证失败：用户名或密码不正确",
-    "hostUnreachable": "无法连接主机（网络不可达或端口未开放）",
-    "timeout": "连接超时"
+    "hostUnreachable": "无法解析或到达主机 {{host}}，请检查地址与网络",
+    "timeout": "连接超时：{{host}}:{{port}} 无响应，请检查地址、端口或防火墙",
+    "connectionRefused": "连接被拒绝：请确认 {{host}}:{{port}} 是否正确且 SSH 服务在监听",
+    "cancelled": "已取消连接",
+    "connectingStatus": "正在连接 {{name}}（{{host}}:{{port}}）…",
+    "connectingHint": "若长时间无响应，请检查地址与端口是否正确",
+    "connecting": "连接中…",
+    "cancelConnect": "取消连接"
   },
   "common": {
     "dismiss": "关闭",

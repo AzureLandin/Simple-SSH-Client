@@ -114,12 +114,29 @@ export function ModalShell({
     .filter(Boolean)
     .join(' ')
 
+  const overlayPointerDownRef = useRef(false)
+
+  const onOverlayPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
+    // Only count presses that start on the dimmed backdrop, not the dialog.
+    overlayPointerDownRef.current = e.target === e.currentTarget
+  }
+
+  const onOverlayClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+    if (!closeOnOverlayClick) return
+    // Ignore click if the gesture started inside the dialog (e.g. text selection
+    // drag that ends on the backdrop) — that used to close the host picker.
+    if (!overlayPointerDownRef.current) return
+    if (e.target !== e.currentTarget) return
+    requestClose()
+  }
+
   return (
     <ModalCloseContext.Provider value={requestClose}>
       <div
         className={overlayClass}
         role="presentation"
-        onClick={closeOnOverlayClick ? requestClose : undefined}
+        onPointerDown={onOverlayPointerDown}
+        onClick={onOverlayClick}
       >
         <div
           className={dialogClass}

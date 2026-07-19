@@ -22,7 +22,7 @@ interface McpSession {
   lastActiveAt: number
 }
 
-const MAX_READ_BYTES = 512 * 1024
+export const MAX_MCP_FILE_BYTES = 512 * 1024
 const IDLE_CHECK_INTERVAL_MS = 15_000
 
 function errMessage(err: unknown): string {
@@ -37,6 +37,8 @@ export class McpRuntime {
   private sessions = new Map<string, McpSession>()
   private readonly sftp: SftpService
   private idleTimer: ReturnType<typeof setInterval> | null = null
+  /** In-flight command counts — idle reap skips busy sessions. */
+  private activeCommands = new Map<string, number>()
 
   constructor(
     private readonly hosts: ConnectionStore,
@@ -85,10 +87,13 @@ export class McpRuntime {
       }
     }
 
-    const host = await this.hosts.getById(hostId)
+    const [host, savedMaybe] = await Promise.all([
+      this.hosts.getById(hostId),
+      this.credentials.get(hostId)
+    ])
     if (!host) throw { code: 'UNKNOWN', message: `Host not found: ${hostId}` }
 
-    const saved = host.credentialsSaved ? await this.credentials.get(hostId) : undefined
+    const saved = host.credentialsSaved ? savedMaybe : undefined
     const client = new SshClient(this.knownHosts)
     const sessionId = randomUUID()
 
@@ -113,8 +118,11 @@ export class McpRuntime {
       lastActiveAt: Date.now()
     })
     client.onClose(() => {
+      if (!this.sessions.has(sessionId)) return
       this.sessions.delete(sessionId)
+      this.activeCommands.delete(sessionId)
       this.sftp.dispose(sessionId)
+      client.dispose()
     })
 
     return { sessionId, title }
@@ -124,6 +132,7 @@ export class McpRuntime {
     const s = this.sessions.get(sessionId)
     if (!s) return
     this.sessions.delete(sessionId)
+    this.activeCommands.delete(sessionId)
     this.sftp.dispose(sessionId)
     s.client.dispose()
   }
@@ -132,6 +141,7 @@ export class McpRuntime {
     const { idleTimeoutMs } = await this.getPolicy()
     const closed: string[] = []
     for (const s of [...this.sessions.values()]) {
+      if ((this.activeCommands.get(s.id) ?? 0) > 0) continue
       if (now - s.lastActiveAt >= idleTimeoutMs) {
         closed.push(s.id)
         this.disconnectSession(s.id)
@@ -154,8 +164,21 @@ export class McpRuntime {
     })
   }
 
+  /** Test helper: mark session as having in-flight commands (skip idle reap). */
+  setActiveCommandCountForTest(sessionId: string, count: number): void {
+    if (count <= 0) this.activeCommands.delete(sessionId)
+    else this.activeCommands.set(sessionId, count)
+  }
+
   async runCommand(sessionId: string, command: string, timeoutMs = 60000): Promise<string> {
-    return this.getClient(sessionId).exec(command, timeoutMs)
+    this.bumpActive(sessionId, 1)
+    try {
+      return await this.getClient(sessionId).exec(command, timeoutMs)
+    } finally {
+      this.bumpActive(sessionId, -1)
+      const s = this.sessions.get(sessionId)
+      if (s) s.lastActiveAt = Date.now()
+    }
   }
 
   async sftpList(sessionId: string, remotePath?: string) {
@@ -168,58 +191,13 @@ export class McpRuntime {
   }
 
   async sftpRead(sessionId: string, remotePath: string): Promise<{ path: string; content: string }> {
-    const client = this.getClient(sessionId)
-    const raw = client.getRawClient()
-    if (!raw) throw { code: 'SESSION_NOT_FOUND', message: 'SSH client missing' }
-
-    const sftp = await new Promise<import('ssh2').SFTPWrapper>((resolve, reject) => {
-      raw.sftp((err, session) => {
-        if (err || !session) reject({ code: 'UNKNOWN', message: err?.message ?? 'sftp failed' })
-        else resolve(session)
-      })
-    })
-
-    try {
-      const buf = await new Promise<Buffer>((resolve, reject) => {
-        sftp.readFile(remotePath, (err, data) => {
-          if (err || !data) reject({ code: 'UNKNOWN', message: err?.message ?? 'read failed' })
-          else resolve(data)
-        })
-      })
-      if (buf.length > MAX_READ_BYTES) {
-        throw {
-          code: 'UNKNOWN',
-          message: `File too large (${buf.length} bytes); max ${MAX_READ_BYTES}`
-        }
-      }
-      return { path: remotePath, content: buf.toString('utf8') }
-    } finally {
-      sftp.end()
-    }
+    this.getClient(sessionId)
+    return this.sftp.readText(sessionId, remotePath, MAX_MCP_FILE_BYTES)
   }
 
   async sftpWrite(sessionId: string, remotePath: string, content: string): Promise<void> {
-    const client = this.getClient(sessionId)
-    const raw = client.getRawClient()
-    if (!raw) throw { code: 'SESSION_NOT_FOUND', message: 'SSH client missing' }
-
-    const sftp = await new Promise<import('ssh2').SFTPWrapper>((resolve, reject) => {
-      raw.sftp((err, session) => {
-        if (err || !session) reject({ code: 'UNKNOWN', message: err?.message ?? 'sftp failed' })
-        else resolve(session)
-      })
-    })
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        sftp.writeFile(remotePath, Buffer.from(content, 'utf8'), (err) => {
-          if (err) reject({ code: 'UNKNOWN', message: err.message })
-          else resolve()
-        })
-      })
-    } finally {
-      sftp.end()
-    }
+    this.getClient(sessionId)
+    await this.sftp.writeText(sessionId, remotePath, content, MAX_MCP_FILE_BYTES)
   }
 
   async sftpUpload(sessionId: string, localPath: string, remoteName?: string): Promise<void> {
@@ -248,5 +226,11 @@ export class McpRuntime {
       err && typeof err === 'object' && 'code' in err ? String((err as { code: unknown }).code) : ''
     const msg = errMessage(err)
     return code ? `${code}: ${msg}` : msg
+  }
+
+  private bumpActive(sessionId: string, delta: number): void {
+    const next = (this.activeCommands.get(sessionId) ?? 0) + delta
+    if (next <= 0) this.activeCommands.delete(sessionId)
+    else this.activeCommands.set(sessionId, next)
   }
 }

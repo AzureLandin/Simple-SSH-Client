@@ -23,6 +23,9 @@ export class ConnectError extends Error {
   }
 }
 
+/** Bound background output while a tab's TerminalView is unmounted. */
+const OUTPUT_RING_MAX = 96 * 1024
+
 async function invokeConnect(
   hostId: string,
   options?: ConnectOptions
@@ -36,17 +39,32 @@ async function invokeConnect(
   }
 }
 
+function appendRing(prev: string, data: string, max: number): string {
+  const next = prev.length === 0 ? data : prev + data
+  if (next.length <= max) return next
+  return next.slice(next.length - max)
+}
+
 export function useSessions() {
   const [sessions, setSessions] = useState<UiSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const dataListenersRef = useRef(new Map<string, (data: string) => void>())
+  const outputRingsRef = useRef(new Map<string, string>())
 
   useEffect(() => {
     const offData = window.api.sessions.onData(({ sessionId, data }) => {
-      dataListenersRef.current.get(sessionId)?.(data)
+      const listener = dataListenersRef.current.get(sessionId)
+      if (listener) {
+        listener(data)
+        return
+      }
+      // Inactive / unmounted terminal — keep a bounded ring for replay on remount.
+      const prev = outputRingsRef.current.get(sessionId) ?? ''
+      outputRingsRef.current.set(sessionId, appendRing(prev, data, OUTPUT_RING_MAX))
     })
     const offClosed = window.api.sessions.onClosed(({ sessionId }) => {
+      outputRingsRef.current.delete(sessionId)
       setSessions((prev) =>
         prev.map((s) => (s.sessionId === sessionId ? { ...s, status: 'disconnected' } : s))
       )
@@ -68,6 +86,11 @@ export function useSessions() {
 
   const registerDataListener = useCallback(
     (sessionId: string, cb: (data: string) => void): (() => void) => {
+      const buffered = outputRingsRef.current.get(sessionId)
+      if (buffered) {
+        outputRingsRef.current.delete(sessionId)
+        cb(buffered)
+      }
       dataListenersRef.current.set(sessionId, cb)
       return () => {
         dataListenersRef.current.delete(sessionId)
@@ -95,6 +118,7 @@ export function useSessions() {
     } catch {
       /* session may already be gone */
     }
+    outputRingsRef.current.delete(sessionId)
     setSessions((prev) => {
       const next = prev.filter((s) => s.sessionId !== sessionId)
       setActiveSessionId((active) => {
@@ -112,6 +136,7 @@ export function useSessions() {
       try {
         const { sessionId } = await invokeConnect(host.id, options)
         const oldId = session.sessionId
+        outputRingsRef.current.delete(oldId)
         setSessions((prev) =>
           prev.map((s) =>
             s.sessionId === oldId

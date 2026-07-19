@@ -23,6 +23,9 @@ function configError(code: AppError['code'], message: string): AppError {
 }
 
 export class CredentialStore {
+  /** Cached encrypted vault — decrypt still runs per get(), but skips disk I/O. */
+  private cache: VaultFile | null = null
+
   constructor(
     private readonly filePath: string,
     private readonly safeStorage: SafeStorageLike
@@ -70,17 +73,22 @@ export class CredentialStore {
   }
 
   private async read(): Promise<VaultFile> {
+    if (this.cache) return this.cache
     try {
       const raw = await readFile(this.filePath, 'utf8')
       const parsed = JSON.parse(raw) as VaultFile
       if (!parsed || parsed.version !== 1 || typeof parsed.entries !== 'object') {
         throw configError('CONFIG_READ_FAILED', 'Credentials file is corrupt')
       }
-      return parsed
+      this.cache = parsed
+      return this.cache
     } catch (err) {
       const code = (err as { code?: string }).code
       if (code === 'CONFIG_READ_FAILED') throw err
-      if (code === 'ENOENT') return { version: 1, entries: {} }
+      if (code === 'ENOENT') {
+        this.cache = { version: 1, entries: {} }
+        return this.cache
+      }
       throw configError(
         'CONFIG_READ_FAILED',
         err instanceof Error ? err.message : 'Failed to read credentials'
@@ -89,6 +97,7 @@ export class CredentialStore {
   }
 
   private async write(data: VaultFile): Promise<void> {
+    this.cache = data
     try {
       await writeJsonAtomic(this.filePath, data)
     } catch (err) {

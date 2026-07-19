@@ -47,17 +47,17 @@ export function registerIpc(
   )
 
   ipcMain.handle(IPC.sessionsConnect, async (_e, hostId: string, options?: ConnectOptions) =>
-    withIpcErrors(async () => {
-      const result = await sessions.connect(hostId, options)
-      void sftp.ensure(result.sessionId).catch(() => {})
-      return result
-    })
+    withIpcErrors(async () => sessions.connect(hostId, options))
   )
-  ipcMain.handle(IPC.sessionsWrite, async (_e, sessionId: string, data: string) =>
-    withIpcErrors(async () => {
+  // Fire-and-forget hot path — keystrokes/paste must not await invoke round-trips.
+  ipcMain.on(IPC.sessionsWrite, (_e, sessionId: string, data: string) => {
+    try {
+      if (typeof sessionId !== 'string' || typeof data !== 'string') return
       sessions.write(sessionId, data)
-    })
-  )
+    } catch {
+      /* session may already be gone */
+    }
+  })
   ipcMain.handle(IPC.sessionsResize, async (_e, sessionId: string, cols: number, rows: number) =>
     withIpcErrors(async () => {
       const c = Math.min(500, Math.max(1, Number(cols) || 80))
@@ -68,6 +68,11 @@ export function registerIpc(
   ipcMain.handle(IPC.sessionsDisconnect, async (_e, sessionId: string) =>
     withIpcErrors(async () => {
       sessions.disconnect(sessionId)
+    })
+  )
+  ipcMain.handle(IPC.sessionsCancelConnect, async () =>
+    withIpcErrors(async () => {
+      sessions.cancelConnect()
     })
   )
 

@@ -53,4 +53,12 @@ describe('ipc-error', () => {
       )
     ).toEqual({ code: 'UNKNOWN', message: 'Connection failed' })
   })
+
+  it('round-trips CANCELLED across IPC', () => {
+    const e = toIpcThrownError({ code: 'CANCELLED', message: 'Connection cancelled' })
+    expect(parseIpcThrownError(e)).toEqual({
+      code: 'CANCELLED',
+      message: 'Connection cancelled'
+    })
+  })
 })

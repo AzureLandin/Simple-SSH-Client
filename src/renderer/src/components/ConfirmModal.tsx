@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface ConfirmModalProps {
@@ -20,6 +20,7 @@ export function ConfirmModal({
   onCancel
 }: ConfirmModalProps): React.JSX.Element {
   const { t } = useTranslation()
+  const overlayPointerDownRef = useRef(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -30,7 +31,18 @@ export function ConfirmModal({
   }, [onCancel])
 
   return (
-    <div className="modal-overlay confirm-modal-overlay" role="presentation" onClick={onCancel}>
+    <div
+      className="modal-overlay confirm-modal-overlay"
+      role="presentation"
+      onPointerDown={(e) => {
+        overlayPointerDownRef.current = e.target === e.currentTarget
+      }}
+      onClick={(e) => {
+        if (!overlayPointerDownRef.current) return
+        if (e.target !== e.currentTarget) return
+        onCancel()
+      }}
+    >
       <div
         className="modal confirm-modal"
         role="dialog"

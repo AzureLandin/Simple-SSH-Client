@@ -10,7 +10,7 @@ import {
 } from './monitor-parse'
 import type { SshClient } from './ssh-client'
 
-const POLL_MS = 2000
+const POLL_MS = 4000
 
 interface SampleState {
   cpu: CpuCounters

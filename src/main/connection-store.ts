@@ -12,6 +12,9 @@ function configError(code: AppError['code'], message: string): AppError {
 }
 
 export class ConnectionStore {
+  /** In-memory hosts list — avoids disk read + JSON.parse on every connect. */
+  private cache: HostsFile | null = null
+
   constructor(private readonly filePath: string) {}
 
   async list(): Promise<HostConfig[]> {
@@ -51,6 +54,7 @@ export class ConnectionStore {
   }
 
   private async read(): Promise<HostsFile> {
+    if (this.cache) return this.cache
     try {
       const raw = await readFile(this.filePath, 'utf8')
       try {
@@ -58,14 +62,18 @@ export class ConnectionStore {
         if (!parsed || !Array.isArray(parsed.hosts)) {
           throw new Error('invalid shape')
         }
-        return parsed
+        this.cache = parsed
+        return this.cache
       } catch {
         throw configError('CONFIG_READ_FAILED', 'Hosts file is corrupt')
       }
     } catch (err) {
       const code = (err as { code?: string }).code
       if (code === 'CONFIG_READ_FAILED') throw err
-      if (code === 'ENOENT') return { hosts: [] }
+      if (code === 'ENOENT') {
+        this.cache = { hosts: [] }
+        return this.cache
+      }
       throw configError(
         'CONFIG_READ_FAILED',
         err instanceof Error ? err.message : 'Failed to read hosts file'
@@ -74,6 +82,7 @@ export class ConnectionStore {
   }
 
   private async write(data: HostsFile): Promise<void> {
+    this.cache = data
     try {
       await writeJsonAtomic(this.filePath, data)
     } catch (err) {

@@ -75,6 +75,27 @@ describe('McpRuntime session limits', () => {
     expect(runtime.listSessions().map((s) => s.sessionId)).toEqual(['fresh'])
   })
 
+  it('skips idle reap while a command is in flight', async () => {
+    runtime = new McpRuntime(
+      hosts as never,
+      credentials as never,
+      knownHosts as never,
+      async () => ({ idleTimeoutMs: 1_000, maxSessions: 8 })
+    )
+    runtime.addSessionForTest({
+      id: 'busy',
+      hostId: 'h1',
+      title: 'u@h',
+      client: fakeClient() as never,
+      lastActiveAt: Date.now() - 5_000
+    })
+    runtime.setActiveCommandCountForTest('busy', 1)
+
+    const closed = await runtime.reapIdleSessions()
+    expect(closed).toEqual([])
+    expect(runtime.listSessions().map((s) => s.sessionId)).toEqual(['busy'])
+  })
+
   it('rejects connect when at max sessions', async () => {
     runtime = new McpRuntime(
       hosts as never,

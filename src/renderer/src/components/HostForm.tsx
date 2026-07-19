@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthMethod, HostInput } from '../../../shared/types'
+import { PasswordField } from './PasswordField'
 import { Select } from './Select'
 
 export interface HostFormSubmit {
@@ -147,22 +148,19 @@ export function HostForm({ initial, onSubmit, onCancel }: HostFormProps): React.
       </div>
 
       {authMethod === 'password' && (
-        <label className="form-field">
-          <span>{t('form.password')}</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value)
-              setFormError(null)
-            }}
-            required={!isEdit}
-            disabled={submitting}
-            placeholder={isEdit ? t('form.passwordLeaveBlank') : undefined}
-            aria-invalid={Boolean(formError)}
-            autoComplete="new-password"
-          />
-        </label>
+        <PasswordField
+          label={t('form.password')}
+          value={password}
+          onChange={(next) => {
+            setPassword(next)
+            setFormError(null)
+          }}
+          required={!isEdit}
+          disabled={submitting}
+          placeholder={isEdit ? t('form.passwordLeaveBlank') : undefined}
+          aria-invalid={Boolean(formError)}
+          autoComplete="new-password"
+        />
       )}
 
       {authMethod === 'privateKey' && (

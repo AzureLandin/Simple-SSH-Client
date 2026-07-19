@@ -44,6 +44,14 @@ describe('ConnectionStore', () => {
     await expect(store.list()).resolves.toEqual([])
   })
 
+  it('serves subsequent reads from memory cache', async () => {
+    const host = await store.create(sample)
+    const a = await store.getById(host.id)
+    const b = await store.getById(host.id)
+    expect(a).toEqual(b)
+    expect(a?.name).toBe('lab')
+  })
+
   it('does not write password fields (hosts have no password key)', async () => {
     const host = await store.create(sample)
     const raw = JSON.parse(readFileSync(filePath, 'utf8'))

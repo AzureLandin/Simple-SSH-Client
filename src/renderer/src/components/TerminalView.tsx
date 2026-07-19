@@ -9,6 +9,9 @@ import {
   getTerminalTheme
 } from '../terminal-theme'
 
+/** Cap scrollback so the active terminal stays bounded in memory. */
+const TERMINAL_SCROLLBACK = 1000
+
 interface TerminalViewProps {
   sessionId: string
   registerDataListener: (sessionId: string, cb: (data: string) => void) => () => void
@@ -34,10 +37,12 @@ export function TerminalView({
   const fontSizeRef = useRef(fontSize)
   const onFontSizeChangeRef = useRef(onFontSizeChange)
   const resolvedThemeRef = useRef(resolvedTheme)
+  const visibleRef = useRef(visible)
 
   fontSizeRef.current = fontSize
   onFontSizeChangeRef.current = onFontSizeChange
   resolvedThemeRef.current = resolvedTheme
+  visibleRef.current = visible
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -46,6 +51,7 @@ export function TerminalView({
       cursorBlink: true,
       fontFamily: buildTerminalFontStack(fontFamily),
       fontSize,
+      scrollback: TERMINAL_SCROLLBACK,
       theme: getTerminalTheme(resolvedThemeRef.current),
       allowTransparency: false
     })
@@ -60,16 +66,31 @@ export function TerminalView({
     termRef.current = term
     fitRef.current = fit
 
-    const unsub = registerDataListener(sessionId, (data) => term.write(data))
+    // Coalesce high-frequency IPC chunks into one write per animation frame.
+    let pending = ''
+    let raf: number | null = null
+    const flush = (): void => {
+      raf = null
+      if (!pending) return
+      const chunk = pending
+      pending = ''
+      term.write(chunk)
+    }
+    const unsub = registerDataListener(sessionId, (data) => {
+      pending += data
+      if (raf == null) raf = requestAnimationFrame(flush)
+    })
     const onData = term.onData((data) => {
-      void window.api.sessions.write(sessionId, data)
+      window.api.sessions.write(sessionId, data)
     })
 
     let fitTimer: number | null = null
     const scheduleFit = (immediate = false): void => {
+      if (!visibleRef.current) return
       if (fitTimer != null) window.clearTimeout(fitTimer)
       const run = (): void => {
         fitTimer = null
+        if (!visibleRef.current) return
         try {
           fit.fit()
           void window.api.sessions.resize(sessionId, term.cols, term.rows)
@@ -97,6 +118,8 @@ export function TerminalView({
       onData.dispose()
       ro.disconnect()
       if (fitTimer != null) window.clearTimeout(fitTimer)
+      if (raf != null) cancelAnimationFrame(raf)
+      if (pending) term.write(pending)
       term.dispose()
       termRef.current = null
       fitRef.current = null
@@ -111,6 +134,7 @@ export function TerminalView({
     if (!term || !fit) return
     term.options.fontFamily = buildTerminalFontStack(fontFamily)
     term.options.fontSize = fontSize
+    if (!visibleRef.current) return
     try {
       fit.fit()
       void window.api.sessions.resize(sessionId, term.cols, term.rows)

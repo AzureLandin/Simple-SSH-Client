@@ -1,5 +1,5 @@
-import { createWriteStream, createReadStream, statSync } from 'fs'
-import { mkdir } from 'fs/promises'
+import { createWriteStream, createReadStream } from 'fs'
+import { mkdir, stat as fsStat } from 'fs/promises'
 import { basename, dirname } from 'path'
 import type { BrowserWindow } from 'electron'
 import type { Attributes, SFTPWrapper } from 'ssh2'
@@ -224,6 +224,80 @@ export class SftpService {
     await this.removePath(sftp, path)
   }
 
+  /**
+   * Read a remote text file with a hard size cap.
+   * Stats first so oversized files never load fully into memory.
+   */
+  async readText(
+    sessionId: string,
+    remotePath: string,
+    maxBytes: number
+  ): Promise<{ path: string; content: string }> {
+    const sftp = await this.ensure(sessionId)
+    const cwd = this.cwds.get(sessionId) ?? '/'
+    const path = await this.resolveExistingPath(sftp, cwd, remotePath)
+    const attrs = await this.stat(sftp, path)
+    if (attrs.isDirectory) {
+      throw { code: 'UNKNOWN', message: 'Path is a directory' }
+    }
+    if (attrs.size > maxBytes) {
+      throw {
+        code: 'UNKNOWN',
+        message: `File too large (${attrs.size} bytes); max ${maxBytes}`
+      }
+    }
+    if (attrs.size === 0) {
+      return { path, content: '' }
+    }
+
+    const chunks: Buffer[] = []
+    let bytes = 0
+    await new Promise<void>((resolve, reject) => {
+      const stream = sftp.createReadStream(path)
+      stream.on('data', (chunk: Buffer | string) => {
+        const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk
+        bytes += buf.length
+        if (bytes > maxBytes) {
+          stream.destroy()
+          reject({
+            code: 'UNKNOWN',
+            message: `File too large (>${maxBytes} bytes); max ${maxBytes}`
+          })
+          return
+        }
+        chunks.push(buf)
+      })
+      stream.on('error', (err) => reject({ code: 'UNKNOWN', message: err.message }))
+      stream.on('end', () => resolve())
+    })
+
+    return { path, content: Buffer.concat(chunks).toString('utf8') }
+  }
+
+  async writeText(
+    sessionId: string,
+    remotePath: string,
+    content: string,
+    maxBytes: number
+  ): Promise<void> {
+    const byteLength = Buffer.byteLength(content, 'utf8')
+    if (byteLength > maxBytes) {
+      throw {
+        code: 'UNKNOWN',
+        message: `Content too large (${byteLength} bytes); max ${maxBytes}`
+      }
+    }
+    const sftp = await this.ensure(sessionId)
+    const cwd = this.cwds.get(sessionId) ?? '/'
+    const path = await this.resolveMutablePath(sftp, cwd, remotePath)
+    await new Promise<void>((resolve, reject) => {
+      sftp.writeFile(path, Buffer.from(content, 'utf8'), (err) => {
+        if (err) reject({ code: 'UNKNOWN', message: err.message })
+        else resolve()
+      })
+    })
+  }
+
   async upload(sessionId: string, localPath: string, remoteName?: string): Promise<void> {
     const sftp = await this.ensure(sessionId)
     const cwd = this.cwds.get(sessionId) ?? '/'
@@ -231,7 +305,7 @@ export class SftpService {
     const remotePath = await this.resolveMutablePath(sftp, cwd, name)
     let total = 0
     try {
-      total = statSync(localPath).size
+      total = (await fsStat(localPath)).size
     } catch {
       total = 0
     }

@@ -112,18 +112,18 @@ export function SessionTabs({
               )}
 
             <div className="session-terminals">
-              {sessions.map((session) => (
+              {activeSession && (
                 <TerminalView
-                  key={session.sessionId}
-                  sessionId={session.sessionId}
+                  key={activeSession.sessionId}
+                  sessionId={activeSession.sessionId}
                   registerDataListener={registerDataListener}
-                  visible={session.sessionId === activeSessionId}
+                  visible
                   fontFamily={terminalFontFamily}
                   fontSize={terminalFontSize}
                   resolvedTheme={resolvedTheme}
                   onFontSizeChange={onTerminalFontSizeChange}
                 />
-              ))}
+              )}
             </div>
           </>
         )}

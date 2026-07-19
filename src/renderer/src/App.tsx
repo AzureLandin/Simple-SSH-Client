@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import type { HostFormSubmit } from './components/HostForm'
 import { HostPickerModal } from './components/HostPickerModal'
 import { ModalShell, useModalClose } from './components/ModalShell'
+import { PasswordField } from './components/PasswordField'
 import { SessionTabs } from './components/SessionTabs'
 import { SettingsModal } from './components/SettingsModal'
 import { SidebarPanel } from './components/SidebarPanel'
@@ -37,12 +38,14 @@ function PasswordModalBody({
   host,
   busy,
   error,
-  onSubmit
+  onSubmit,
+  onCancelConnect
 }: {
   host: HostConfig
   busy: boolean
   error: string | null
   onSubmit: (password: string) => void
+  onCancelConnect?: () => void
 }): React.JSX.Element {
   const { t } = useTranslation()
   const requestClose = useModalClose()
@@ -62,31 +65,43 @@ function PasswordModalBody({
       <p className="modal-subtitle">
         {host.username}@{host.host}:{host.port}
       </p>
-      <label className="form-field">
-        <span>{t('auth.passwordLabel')}</span>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoFocus
-          required
-          disabled={busy}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? 'password-modal-error' : undefined}
-          className={error ? 'input-invalid' : undefined}
-        />
-      </label>
+      {busy && (
+        <p className="host-picker-connecting-status" role="status">
+          {t('auth.connectingStatus', {
+            name: host.name,
+            host: host.host,
+            port: host.port
+          })}
+        </p>
+      )}
+      <PasswordField
+        label={t('auth.passwordLabel')}
+        value={password}
+        onChange={setPassword}
+        autoFocus
+        required
+        disabled={busy}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'password-modal-error' : undefined}
+        className={error ? 'input-invalid' : undefined}
+      />
       {error && (
         <p id="password-modal-error" className="form-inline-error" role="alert">
           {error}
         </p>
       )}
       <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={requestClose} disabled={busy}>
-          {t('form.cancel')}
-        </button>
+        {busy && onCancelConnect ? (
+          <button type="button" className="btn-secondary" onClick={onCancelConnect}>
+            {t('auth.cancelConnect')}
+          </button>
+        ) : (
+          <button type="button" className="btn-secondary" onClick={requestClose} disabled={busy}>
+            {t('form.cancel')}
+          </button>
+        )}
         <button type="submit" className="btn-primary" disabled={busy}>
-          {t('auth.connect')}
+          {busy ? t('auth.connecting') : t('auth.connect')}
         </button>
       </div>
     </form>
@@ -98,13 +113,15 @@ function PasswordModal({
   busy,
   error,
   onSubmit,
-  onCancel
+  onCancel,
+  onCancelConnect
 }: {
   host: HostConfig
   busy: boolean
   error: string | null
   onSubmit: (password: string) => void
   onCancel: () => void
+  onCancelConnect?: () => void
 }): React.JSX.Element {
   return (
     <ModalShell
@@ -114,7 +131,13 @@ function PasswordModal({
       closeOnEscape={!busy}
       closeOnOverlayClick={false}
     >
-      <PasswordModalBody host={host} busy={busy} error={error} onSubmit={onSubmit} />
+      <PasswordModalBody
+        host={host}
+        busy={busy}
+        error={error}
+        onSubmit={onSubmit}
+        onCancelConnect={onCancelConnect}
+      />
     </ModalShell>
   )
 }
@@ -137,6 +160,10 @@ function App(): React.JSX.Element {
   const [passwordAction, setPasswordAction] = useState<PasswordAction | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
+  const [connectingHost, setConnectingHost] = useState<HostConfig | null>(null)
+  const [connectError, setConnectError] = useState<string | null>(null)
+  const hostsOpenRef = useRef(false)
+  const passwordActionRef = useRef<PasswordAction | null>(null)
   const [language, setLanguage] = useState<LanguageCode>('zh')
   const [themePreference, setThemePreference] = useState<ThemePreference>('system')
   const [systemPrefersDark, setSystemPrefersDark] = useState(() =>
@@ -146,12 +173,17 @@ function App(): React.JSX.Element {
   const [terminalFontSize, setTerminalFontSize] = useState(14)
   const [mcpIdleTimeoutMinutes, setMcpIdleTimeoutMinutes] = useState(10)
   const [mcpMaxSessions, setMcpMaxSessions] = useState(8)
-  const [sftpExpanded, setSftpExpanded] = useState(true)
+  const [sftpExpanded, setSftpExpanded] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [hostsOpen, setHostsOpen] = useState(false)
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null)
   const connectingRef = useRef(false)
   const savePromptedRef = useRef(new Set<string>())
+  const fontSizePersistTimerRef = useRef<number | null>(null)
+  const fontSizePersistBaselineRef = useRef(14)
+
+  hostsOpenRef.current = hostsOpen
+  passwordActionRef.current = passwordAction
 
   const resolvedTheme = resolveTheme(themePreference, systemPrefersDark)
 
@@ -172,6 +204,7 @@ function App(): React.JSX.Element {
         setThemePreference(settings.themePreference)
         setTerminalFontFamily(settings.terminalFontFamily)
         setTerminalFontSize(settings.terminalFontSize)
+        fontSizePersistBaselineRef.current = settings.terminalFontSize
         setMcpIdleTimeoutMinutes(settings.mcpIdleTimeoutMinutes)
         setMcpMaxSessions(settings.mcpMaxSessions)
         await i18n.changeLanguage(settings.language)
@@ -180,11 +213,17 @@ function App(): React.JSX.Element {
         setThemePreference('system')
         setTerminalFontFamily('Hack')
         setTerminalFontSize(14)
+        fontSizePersistBaselineRef.current = 14
         setMcpIdleTimeoutMinutes(10)
         setMcpMaxSessions(8)
         await i18n.changeLanguage('zh')
       }
     })()
+    return () => {
+      if (fontSizePersistTimerRef.current != null) {
+        window.clearTimeout(fontSizePersistTimerRef.current)
+      }
+    }
   }, [])
 
   const askConfirm = (request: Omit<ConfirmRequest, 'resolve'>): Promise<boolean> =>
@@ -192,10 +231,20 @@ function App(): React.JSX.Element {
       setConfirmRequest({ ...request, resolve })
     })
 
-  const localizeConnectError = (e: unknown, fallbackKey: 'auth.connectionFailed' | 'auth.reconnectFailed'): string => {
+  const localizeConnectError = (
+    e: unknown,
+    fallbackKey: 'auth.connectionFailed' | 'auth.reconnectFailed',
+    host?: HostConfig | null
+  ): string => {
     const parsed = e instanceof ConnectError ? { code: e.code, message: e.message } : parseIpcThrownError(e)
     const code = parsed.code
     const parsedMessage = parsed.message
+    const addr = {
+      name: host?.name ?? '',
+      host: host?.host ?? '',
+      port: host?.port ?? ''
+    }
+    if (code === 'CANCELLED') return t('auth.cancelled')
     if (
       code === 'AUTH_FAILED' ||
       /authentication failed/i.test(parsedMessage) ||
@@ -203,8 +252,9 @@ function App(): React.JSX.Element {
     ) {
       return t('auth.authFailed')
     }
-    if (code === 'HOST_UNREACHABLE' || code === 'CONNECTION_REFUSED') return t('auth.hostUnreachable')
-    if (code === 'TIMEOUT') return t('auth.timeout')
+    if (code === 'CONNECTION_REFUSED') return t('auth.connectionRefused', addr)
+    if (code === 'HOST_UNREACHABLE') return t('auth.hostUnreachable', addr)
+    if (code === 'TIMEOUT') return t('auth.timeout', addr)
     return parsedMessage || t(fallbackKey)
   }
 
@@ -250,16 +300,26 @@ function App(): React.JSX.Element {
     }
   }
 
-  const handleTerminalFontSizeChange = async (next: number): Promise<void> => {
-    const previous = terminalFontSize
+  const handleTerminalFontSizeChange = (next: number): void => {
     setTerminalFontSize(next)
-    try {
-      const saved = await window.api.settings.set({ terminalFontSize: next })
-      setTerminalFontSize(saved.terminalFontSize)
-    } catch {
-      setTerminalFontSize(previous)
-      setToast(t('auth.connectionFailed'))
+    if (fontSizePersistTimerRef.current != null) {
+      window.clearTimeout(fontSizePersistTimerRef.current)
     }
+    fontSizePersistTimerRef.current = window.setTimeout(() => {
+      fontSizePersistTimerRef.current = null
+      const baseline = fontSizePersistBaselineRef.current
+      void (async () => {
+        try {
+          const saved = await window.api.settings.set({ terminalFontSize: next })
+          setTerminalFontSize(saved.terminalFontSize)
+          fontSizePersistBaselineRef.current = saved.terminalFontSize
+        } catch {
+          setTerminalFontSize(baseline)
+          fontSizePersistBaselineRef.current = baseline
+          setToast(t('auth.connectionFailed'))
+        }
+      })()
+    }, 300)
   }
 
   const handleMcpIdleTimeoutMinutesChange = async (next: number): Promise<void> => {
@@ -324,17 +384,37 @@ function App(): React.JSX.Element {
     }
   }
 
+  const reportConnectFailure = (host: HostConfig, message: string): void => {
+    if (passwordActionRef.current) {
+      setPasswordError(message)
+      return
+    }
+    if (hostsOpenRef.current) {
+      setConnectError(message)
+      setConnectingHost(host)
+      return
+    }
+    setToast(message)
+  }
+
   const runConnect = async (
     host: HostConfig,
     options?: { password?: string; acceptHostKey?: boolean }
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     try {
       await connect(host, options)
       setPasswordError(null)
       setPasswordAction(null)
+      setConnectError(null)
+      setConnectingHost(null)
       setHostsOpen(false)
       await maybePromptSaveCredentials(host, options?.password)
+      return true
     } catch (e) {
+      if (e instanceof ConnectError && e.code === 'CANCELLED') {
+        reportConnectFailure(host, t('auth.cancelled'))
+        return false
+      }
       if (
         e instanceof ConnectError &&
         (e.code === 'HOST_KEY_CHANGED' || e.code === 'HOST_KEY_UNKNOWN')
@@ -347,11 +427,10 @@ function App(): React.JSX.Element {
             : t('auth.hostKeyChanged', { fingerprint: hostKeyFingerprintLabel(e.message) })
         })
         if (accept) {
-          await runConnect(host, { ...options, acceptHostKey: true })
-          return
+          return runConnect(host, { ...options, acceptHostKey: true })
         }
-        setToast(localizeConnectError(e, 'auth.connectionFailed'))
-        return
+        reportConnectFailure(host, localizeConnectError(e, 'auth.connectionFailed', host))
+        return false
       }
       if (
         e instanceof ConnectError &&
@@ -360,9 +439,11 @@ function App(): React.JSX.Element {
       ) {
         setPasswordError(t('auth.authFailed'))
         setPasswordAction({ type: 'connect', host })
-        return
+        setConnectError(null)
+        return false
       }
-      setToast(localizeConnectError(e, 'auth.connectionFailed'))
+      reportConnectFailure(host, localizeConnectError(e, 'auth.connectionFailed', host))
+      return false
     }
   }
 
@@ -373,6 +454,8 @@ function App(): React.JSX.Element {
     if (connectingRef.current) return
     connectingRef.current = true
     setConnecting(true)
+    setConnectingHost(host)
+    setConnectError(null)
     try {
       await runConnect(host, options)
     } finally {
@@ -385,12 +468,18 @@ function App(): React.JSX.Element {
     session: UiSession,
     host: HostConfig,
     options?: { password?: string; acceptHostKey?: boolean }
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     try {
       await reconnect(session, host, options)
       setPasswordError(null)
       setPasswordAction(null)
+      setConnectError(null)
+      return true
     } catch (e) {
+      if (e instanceof ConnectError && e.code === 'CANCELLED') {
+        reportConnectFailure(host, t('auth.cancelled'))
+        return false
+      }
       if (
         e instanceof ConnectError &&
         (e.code === 'HOST_KEY_CHANGED' || e.code === 'HOST_KEY_UNKNOWN')
@@ -407,11 +496,10 @@ function App(): React.JSX.Element {
               })
         })
         if (accept) {
-          await runReconnect(session, host, { ...options, acceptHostKey: true })
-          return
+          return runReconnect(session, host, { ...options, acceptHostKey: true })
         }
-        setToast(localizeConnectError(e, 'auth.reconnectFailed'))
-        return
+        reportConnectFailure(host, localizeConnectError(e, 'auth.reconnectFailed', host))
+        return false
       }
       if (
         e instanceof ConnectError &&
@@ -420,9 +508,10 @@ function App(): React.JSX.Element {
       ) {
         setPasswordError(t('auth.authFailed'))
         setPasswordAction({ type: 'reconnect', session, host })
-        return
+        return false
       }
-      setToast(localizeConnectError(e, 'auth.reconnectFailed'))
+      reportConnectFailure(host, localizeConnectError(e, 'auth.reconnectFailed', host))
+      return false
     }
   }
 
@@ -434,6 +523,8 @@ function App(): React.JSX.Element {
     if (connectingRef.current) return
     connectingRef.current = true
     setConnecting(true)
+    setConnectingHost(host)
+    setConnectError(null)
     try {
       await runReconnect(session, host, options)
     } finally {
@@ -442,9 +533,13 @@ function App(): React.JSX.Element {
     }
   }
 
+  const handleCancelConnect = (): void => {
+    void window.api.sessions.cancelConnect()
+  }
+
   const handleCreateHost = async ({ input, password }: HostFormSubmit): Promise<void> => {
     const host = await create(input)
-    setHostsOpen(false)
+    // Keep host picker open so connect errors can show in the status box.
     void attemptConnect(host, password ? { password } : undefined)
   }
 
@@ -472,6 +567,7 @@ function App(): React.JSX.Element {
 
   const handleConnect = (host: HostConfig): void => {
     if (connectingRef.current) return
+    setConnectError(null)
     if (host.authMethod === 'password' && !host.credentialsSaved) {
       setPasswordError(null)
       setPasswordAction({ type: 'connect', host })
@@ -550,11 +646,22 @@ function App(): React.JSX.Element {
         <HostPickerModal
           hosts={hosts}
           connecting={connecting}
+          connectingHost={connectingHost}
+          connectError={connectError}
           onConnect={handleConnect}
+          onCancelConnect={handleCancelConnect}
+          onDismissConnectError={() => {
+            setConnectError(null)
+            setConnectingHost(null)
+          }}
           onCreate={(result) => handleCreateHost(result)}
           onUpdate={(id, result) => handleUpdateHost(id, result)}
           onRemove={remove}
-          onClose={() => setHostsOpen(false)}
+          onClose={() => {
+            setHostsOpen(false)
+            setConnectError(null)
+            if (!connecting) setConnectingHost(null)
+          }}
         />
       )}
       {settingsOpen && (
@@ -580,6 +687,7 @@ function App(): React.JSX.Element {
           busy={connecting}
           error={passwordError}
           onSubmit={handlePasswordSubmit}
+          onCancelConnect={handleCancelConnect}
           onCancel={() => {
             if (!connectingRef.current) {
               setPasswordError(null)

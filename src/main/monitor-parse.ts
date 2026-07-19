@@ -66,8 +66,10 @@ function shellWrap(script: string): string {
   return `echo ${b64} | base64 -d | /bin/sh`
 }
 
+const CACHED_MONITOR_SCRIPT = shellWrap(MONITOR_SCRIPT)
+
 export function getMonitorScript(): string {
-  return shellWrap(MONITOR_SCRIPT)
+  return CACHED_MONITOR_SCRIPT
 }
 
 export function parseCpuStatLine(line: string): CpuCounters {
